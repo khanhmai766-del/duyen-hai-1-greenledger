@@ -34,6 +34,9 @@ body {
   justify-content: space-between;
   padding: clamp(26px, 5vw, 52px);
   background: #1b4d3e;
+  background-image: linear-gradient(180deg, #102d23b8, #102d2320 40%, #102d23ed 100%), url('duyen-hai.png');
+  background-position: center;
+  background-size: cover;
   color: #fff;
 }
 
@@ -50,6 +53,22 @@ body {
 h1 { margin: 0; font-size: clamp(28px, 3.4vw, 36px); letter-spacing: -0.045em; }
 .description { margin: 12px 0 25px; color: #4d625a; line-height: 1.6; }
 
+.login-form { display: grid; gap: 8px; }
+.login-form label { font-weight: 650; font-size: 14px; }
+.login-form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #b7c9bd;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  background: #fff;
+}
+.login-form input + label { margin-top: 8px; }
+.login-form .primary { margin-top: 10px; }
+.login-error { color: #9a312c; margin: 2px 0; font-size: 14px; }
+
 .primary {
   display: flex;
   align-items: center;
@@ -62,10 +81,14 @@ h1 { margin: 0; font-size: clamp(28px, 3.4vw, 36px); letter-spacing: -0.045em; }
   color: #fff;
   font-weight: 650;
   text-decoration: none;
+  border: 0;
+  font-family: inherit;
+  font-size: 15px;
+  cursor: pointer;
 }
 
 .primary:hover { background: #28654f; }
-a:focus-visible { outline: 3px solid #43795c; outline-offset: 4px; }
+:is(a, button, input):focus-visible { outline: 3px solid #43795c; outline-offset: 3px; }
 
 .account-links {
   display: flex;
@@ -77,7 +100,8 @@ a:focus-visible { outline: 3px solid #43795c; outline-offset: 4px; }
   font-size: 13px;
 }
 
-.account-links a { color: #395f4f; text-underline-offset: 3px; }
+.account-links a, .account-links button { color: #395f4f; text-underline-offset: 3px; }
+.account-links button { padding: 0; border: 0; background: transparent; font: inherit; text-decoration: underline; cursor: pointer; }
 
 @media (max-width: 640px) {
   .login-card { grid-template-columns: 1fr; min-height: 0; }

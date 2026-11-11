@@ -19,12 +19,16 @@
     <section class="access" aria-labelledby="login-title">
       <div class="access-content">
         <h1 id="login-title">Đăng nhập</h1>
-        <p class="description">Sử dụng tài khoản ChatGPT có quyền truy cập GreenLedger của Duyên Hải 1.</p>
-        <a class="primary" href="/signin-with-chatgpt?return_to=%2F" target="_top">Tiếp tục với ChatGPT <span aria-hidden="true">→</span></a>
-        <nav class="account-links" aria-label="Tài khoản">
-          <a href="/">Về trang tổng quan</a>
-          <a href="/signout-with-chatgpt?return_to=%2F" target="_top">Đăng xuất khỏi GreenLedger</a>
-        </nav>
+        <p class="description">Sử dụng tài khoản của ca vận hành để vào GreenLedger.</p>
+        <form class="login-form" action="/login" method="post">
+          <label for="username">Tài khoản</label>
+          <input id="username" name="username" value="pxvh1" autocomplete="username" maxlength="64" required>
+          <label for="password">Mật khẩu</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" maxlength="128" required>
+          <!-- login-error -->
+          <button type="submit" class="primary">Đăng nhập <span aria-hidden="true">→</span></button>
+        </form>
+        <!-- account-links -->
       </div>
     </section>
   </main>
