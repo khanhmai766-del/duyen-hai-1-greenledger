@@ -1,10 +1,11 @@
 .period-strip[hidden] { display: none; }
-.ipcc-toolbar input { width: min(34vw, 350px); }
-.ipcc-library .activity-table td { padding-top: 11px; padding-bottom: 11px; }
+.reference-table-toolbar .reference-table-search { max-width: 100%; }
+.reference-table-search input { width: clamp(145px, 28vw, 350px); padding: 8px 10px; }
+.reference-table.activity-table td { padding-top: 11px; padding-bottom: 11px; }
+.reference-table td:last-child button { white-space: nowrap; }
 .ipcc-ncv th:nth-child(n+2):nth-child(-n+4), .ipcc-catalog td:nth-child(2) { white-space: nowrap; }
 .ipcc-catalog td:first-child { overflow-wrap: anywhere; }
 .ipcc-catalog td:nth-child(3) { min-width: 66px; }
-.ipcc-library .activity-table td:last-child button { white-space: nowrap; }
 .ipcc-page-links { display: flex; flex-wrap: wrap; gap: 5px; min-width: 115px; }
 .ipcc-reader { width: min(1040px, 95vw); max-width: none; max-height: 94vh; padding: 0; }
 .ipcc-reader-header, .ipcc-reader-tools { display: flex; align-items: center; gap: 8px; padding: 12px 18px; }
@@ -18,5 +19,5 @@
 .ipcc-reader-sheet { height: min(74vh, 820px); overflow: auto; background: #dce3e3; padding: 12px; }
 .ipcc-reader-sheet canvas { display: block; max-width: none; margin: 0 auto; background: white; }
 @media (max-width: 720px) {
-  .ipcc-toolbar input { width: min(56vw, 330px); }
+  .reference-table-search input { width: min(56vw, 330px); }
 }

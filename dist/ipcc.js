@@ -1,7 +1,6 @@
 'use strict';
 
 const ipccView = { mode: 'ncv', edition: '', query: '', page: 1, data: null, status: 'initial' };
-const ipccPageSize = 15;
 const ipccEditions = { '2006': 'IPCC 2006', '2019': 'Bổ sung 2019', GWP: 'GWP / AR6' };
 const ncvMatches = {
   'Gas/Diesel Oil': ['dầu DO diesel', ['DO_STAT', 'DO_ROAD', 'DO_OFFROAD']],
@@ -34,32 +33,36 @@ function ipccDocKeywords(file) {
   ].filter(([pattern]) => pattern.test(file)).map(([, text]) => text).join(' ');
 }
 
-function ncvTable(data, rows) {
+function ncvTableConfig(data) {
   const [file] = data.documents[data.ncvDocument];
   const number = value => value == null ? 'NA' : value.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
-  return `<div class="table-wrap"><table class="activity-table ipcc-ncv">
-    <thead><tr><th>Nhiên liệu</th><th class="num">NCV (TJ/Gg)</th><th class="num">Cận dưới</th><th class="num">Cận trên</th><th>NCV trong thư viện GreenLedger</th><th>Nguồn</th></tr></thead>
-    <tbody>${rows.map(([name, value, low, high, page]) => {
+  return {
+    tableClass: 'ipcc-ncv',
+    columns: [['Nhiên liệu'], ['NCV (TJ/Gg)', 'num'], ['Cận dưới', 'num'], ['Cận trên', 'num'], ['NCV trong thư viện GreenLedger'], ['Nguồn']],
+    cells: ([name, value, low, high, page]) => {
       const [alias, ids = []] = ncvMatches[name] || [];
       const templateId = energyFuelTemplates[ipccFuelRows.findIndex(row => row[0] === name)]?.id;
       const matches = db.fuels.filter(fuel => fuel.id === templateId || ids.includes(fuel.id));
       const library = matches.map(fuel => `<div>${esc(fuel.id)} · ${fuel.ncv.map(number).join(' / ')}</div>`).join('');
-      return `<tr><td><strong>${esc(name)}</strong>${alias ? `<span class="annual-number">${esc(alias)}</span>` : ''}</td>
-      <td class="num">${number(value)}</td><td class="num">${number(low)}</td><td class="num">${number(high)}</td>
-      <td>${library || '—'}</td><td>${pdfButton(file, page)}</td></tr>`;
-    }).join('')}</tbody></table></div>`;
+      return [`<strong>${esc(name)}</strong>${alias ? `<span class="annual-number">${esc(alias)}</span>` : ''}`,
+        number(value), number(low), number(high), library || '—', pdfButton(file, page)];
+    },
+  };
 }
 
-function ipccCatalog(data, rows, mode) {
-  return `<div class="table-wrap"><table class="activity-table ipcc-catalog">
-    <thead><tr><th>${mode === 'tables' ? 'Bảng / nội dung' : 'Tài liệu'}</th><th>Ấn bản</th><th>Trang</th><th>Tra cứu</th></tr></thead>
-    <tbody>${rows.map(row => {
+function ipccCatalogConfig(data, mode) {
+  return {
+    tableClass: 'ipcc-catalog',
+    columns: [[mode === 'tables' ? 'Bảng / nội dung' : 'Tài liệu'], ['Ấn bản'], ['Trang'], ['Tra cứu']],
+    cells: row => {
       const [path, file, edition, size] = mode === 'tables' ? data.documents[row[0]] : row;
       const pages = mode === 'tables' ? row[3] : [1];
       const topic = mode === 'tables' ? `<strong>Bảng ${esc(row[1])} · ${esc(row[2])}</strong><span class="annual-number">${esc(file)}</span>` : `<strong>${esc(file)}</strong>`;
       const actions = pages.map(page => pdfButton(path, page, mode === 'tables' ? 'Xem ' + page : 'Xem nội dung')).join('');
-      return `<tr><td>${topic}</td><td>${esc(ipccEditions[edition])}</td><td>${mode === 'tables' ? pages.join(', ') : size + ' trang'}</td><td><div class="ipcc-page-links">${actions}</div></td></tr>`;
-    }).join('')}</tbody></table></div>`;
+      return [topic, esc(ipccEditions[edition]), mode === 'tables' ? pages.join(', ') : size + ' trang',
+        `<div class="ipcc-page-links">${actions}</div>`];
+    },
+  };
 }
 
 function ipccResults() {
@@ -75,19 +78,8 @@ function ipccResults() {
   });
   else rows = data.documents.filter(([, file, version]) =>
     (!edition || edition === version) && matches(file, ipccDocKeywords(file), ipccEditions[version]));
-  const last = Math.max(1, Math.ceil(rows.length / ipccPageSize));
-  const page = ipccView.page = Math.min(ipccView.page, last);
-  const start = (page - 1) * ipccPageSize;
-  const visible = rows.slice(start, start + ipccPageSize);
-  const table = mode === 'ncv' ? ncvTable(data, visible) : ipccCatalog(data, visible, mode);
-  return `${visible.length ? table : '<p class="empty">Không tìm thấy kết quả phù hợp.</p>'}
-    <div class="activity-table-footer"><span role="status">${rows.length ? `${start + 1}–${start + visible.length} / ` : ''}${rows.length} kết quả</span>
-      <nav class="activity-pagination" aria-label="Phân trang tra cứu IPCC">
-        ${btn('‹', 'ipcc-page', 'small activity-page-button', `data-step="-1" aria-label="Trang trước" ${page === 1 ? 'disabled' : ''}`)}
-        <span class="activity-page-number">${page} / ${last}</span>
-        ${btn('›', 'ipcc-page', 'small activity-page-button', `data-step="1" aria-label="Trang sau" ${page === last ? 'disabled' : ''}`)}
-      </nav>
-    </div>`;
+  const config = mode === 'ncv' ? ncvTableConfig(data) : ipccCatalogConfig(data, mode);
+  return referenceTableResults({ ...config, rows, view: ipccView, label: 'Tra cứu IPCC', pageAction: 'ipcc-page' });
 }
 
 function loadIpccIndex() {
@@ -114,15 +106,9 @@ function ipccPage() {
     ? `<p>Chưa mở được mục lục IPCC.</p>${btn('Thử lại', 'ipcc-retry', 'small')}`
     : '<p role="status">Đang mở mục lục IPCC…</p>'}</section>`;
   const { mode, edition, query } = ipccView;
-  return `<section class="ipcc-library">
-    <div class="activity-table-shell">
-      <div class="activity-table-toolbar ipcc-toolbar">
-        <label>Tìm kiếm <input id="ipcc-query" type="search" placeholder="${mode === 'ncv' ? 'Dầu DO, than, biomass…' : 'Số bảng, nước thải, tên tài liệu…'}" value="${esc(query)}"></label>
-        ${mode === 'ncv' ? '' : `<label>Ấn bản <select id="ipcc-edition"><option value="">Tất cả</option>${Object.entries(ipccEditions).map(([id, label]) => `<option value="${id}" ${edition === id ? 'selected' : ''}>${label}</option>`).join('')}</select></label>`}
-      </div>
-      <div id="ipcc-results">${ipccResults()}</div>
-    </div>
-  </section>`;
+  const toolbar = referenceTableSearch('ipcc-query', mode === 'ncv' ? 'Dầu DO, than, biomass…' : 'Số bảng, nước thải, tên tài liệu…', query) +
+    (mode === 'ncv' ? '' : `<label>Ấn bản <select id="ipcc-edition"><option value="">Tất cả</option>${Object.entries(ipccEditions).map(([id, label]) => `<option value="${id}" ${edition === id ? 'selected' : ''}>${label}</option>`).join('')}</select></label>`);
+  return `<section class="ipcc-library">${referenceTableShell({ toolbar, resultsId: 'ipcc-results', results: ipccResults() })}</section>`;
 }
 
 document.addEventListener('input', event => {
@@ -149,9 +135,7 @@ document.addEventListener('click', event => {
       document.querySelector('[data-action="ipcc-mode"][aria-pressed="true"]')?.focus();
       break;
     case 'ipcc-page':
-      ipccView.page = Math.max(1, ipccView.page + Number(button.dataset.step));
-      document.querySelector('#ipcc-results').innerHTML = ipccResults();
-      document.querySelector('#ipcc-query').focus();
+      moveReferencePage(button, ipccView, 'ipcc-results', ipccResults);
       break;
     case 'ipcc-pdf':
       showIpccContent(button.dataset.file, Number(button.dataset.page));
