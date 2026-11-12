@@ -9,13 +9,14 @@ const types = {
   '.json': 'application/json; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8',
   '.png': 'image/png',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 };
 const htmlRoutes = { 'index.html': '/', 'login.html': '/login' };
 for (const filename of (await readdir('dist')).sort()) {
   const type = types[extname(filename)];
   if (!type) continue;
   const path = htmlRoutes[filename] || '/' + filename;
-  const base64 = type.startsWith('image/');
+  const base64 = type.startsWith('image/') || extname(filename) === '.docx';
   const body = await readFile(`dist/${filename}`, base64 ? 'base64' : 'utf8');
   assets[path] = { type, body, base64 };
 }
