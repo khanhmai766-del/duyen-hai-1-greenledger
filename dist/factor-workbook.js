@@ -2,6 +2,10 @@
 
 const workbookView = { reference: false, query: '', page: 1 };
 
+function setActiveFactorQuery(query) {
+  Object.assign(workbookView, { query, page: 1 });
+}
+
 function mergeWorkbookFactors(database) {
   if (!database || !Array.isArray(database.fuels) || !Array.isArray(database.gases) || database.factorWorkbookVersion === 1) return database;
   const fuels = factorWorkbook.fuels.flatMap(section => section.rows);

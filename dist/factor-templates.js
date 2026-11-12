@@ -66,7 +66,7 @@ function showIpccFuelLibrary(query) {
   tab = 4;
   library = 'fuels';
   workbookView.reference = false;
-  filter = query;
+  setActiveFactorQuery(query);
   render();
 }
 
