@@ -82,6 +82,7 @@ function calculationMethodDialog() {
   const period = p();
   const summary = E.summary(period, db);
   const shared = E.sharedInputs(summary.rows, db);
+  const gridYears = E.gridSeries(period, db).map(item => item.year);
   modal('Phương pháp &amp; giả định', `
     <p class="sub">Kỳ ${period.year} · ${esc(period.facility)}</p>
     <div class="method-dialog-content">
@@ -91,15 +92,25 @@ function calculationMethodDialog() {
         <div><dt>U mở rộng 95% (tCO₂e)</dt><dd>± ${n(summary.U, 6)}</dd></div>
         <div><dt>U tương đối 95%</dt><dd>± ${n(summary.percent)}%</dd></div>
       </dl>
-      <p>Tổng hợp các thành phần độc lập theo <strong>u = √Σuₖ²</strong>. Độ không đảm bảo mở rộng dùng <strong>U = 1,96 × u</strong>.</p>
-      <p>u GWP lấy theo dữ liệu AR6. Độ lệch chuẩn của chuỗi hệ số điện qua các năm được dùng để ước tính biến động.</p>
-      <p>U 95% hiện dùng giả định các thành phần và nguồn độc lập. Rà soát sai số chung khi các nguồn dùng cùng hệ số, GWP hoặc thiết bị đo. Tên thiết bị trùng là dấu hiệu để kiểm tra mã thiết bị và chứng thư hiệu chuẩn.</p>
+      <p>Ảnh hưởng của cùng một đầu vào lên nhiều khí trong một nguồn được cộng trước. Các thành phần độc lập được tổng hợp theo <strong>u = √Σuₖ²</strong>.</p>
+      <div class="form-grid">
+        ${selectField('Hệ số phủ k (mức 95% xấp xỉ)', 'coverageFactor', [[1.96, '1,96'], [2, '2 · theo slide']], summary.k)}
+        ${field('Chuỗi EF điện từ năm', 'gridFrom', period.gridFrom ?? '', 'number', 'min="1900" max="2200" step="1" placeholder="2014"')}
+        ${field('Chuỗi EF điện đến năm', 'gridTo', period.gridTo ?? '', 'number', 'min="1900" max="2200" step="1" placeholder="2024"')}
+      </div>
+      <p>Năm đang dùng để tính độ lệch chuẩn EF điện: ${gridYears.join(', ') || 'chưa có'}. Điền cả hai mốc để chọn khoảng, hoặc để trống cả hai để dùng thư viện. Độ lệch chuẩn này ước tính biến động giữa các năm.</p>
+      <label class="check-row method-setting"><input name="correlateShared" type="checkbox" ${period.correlateShared ? 'checked' : ''}>Tính tương quan hoàn toàn (+1) giữa các nguồn dùng cùng mã hệ số, GWP hoặc mã nhóm sai số AD</label>
+      <p>Bật khi hồ sơ xác nhận các nguồn có sai số chung. Với số liệu hoạt động, chỉ các nguồn có cùng mã nhóm sai số AD được ghép.</p>
       <p>${shared.length ? `Phát hiện ${shared.length} nhóm đầu vào dùng chung. Xem danh sách theo từng nguồn trong sheet <strong>Ra soat DKBDB</strong> khi xuất Excel.` : 'Chưa phát hiện đầu vào dùng chung theo dữ liệu khai báo trong kỳ.'}</p>
       <label class="check-row method-setting"><input name="weightedMix" type="checkbox" ${period.weighted ? 'checked' : ''}>Dùng trọng số khối lượng khi tính u GWP hỗn hợp (giả định các thành phần độc lập)</label><p>Bỏ chọn để đối chiếu với cách tính không trọng số trong Excel cũ. GWP dùng để tính phát thải luôn theo tỷ lệ khối lượng.</p>
     </div>`, form => {
-    const weighted = form.has('weightedMix');
-    return weighted === period.weighted || change(next => {
-      next.periods.find(item => item.id === period.id).weighted = weighted;
+    const from = form.get('gridFrom'), to = form.get('gridTo');
+    if (Boolean(from) !== Boolean(to)) throw Error('Nhập cả năm bắt đầu và năm kết thúc.');
+    const options = { weighted: form.has('weightedMix'), coverageFactor: Number(form.get('coverageFactor')),
+      correlateShared: form.has('correlateShared'), gridFrom: from ? Number(from) : null, gridTo: to ? Number(to) : null };
+    if (from && E.gridSeries(options, db).length < 2) throw Error('Chọn khoảng có ít nhất hai năm hệ số điện.');
+    return change(next => {
+      Object.assign(next.periods.find(item => item.id === period.id), options);
     }, 'Đã lưu thiết lập phương pháp');
   });
   document.querySelector('#modal button[type="submit"]').textContent = 'Lưu thiết lập';

@@ -3,25 +3,60 @@
 const activityUncertaintyPresets = [
   ['custom', 'Tùy chỉnh'],
   ['u-shape', 'U-shape theo tài liệu (u = a / 2)'],
+  ['calibration', 'Giấy hiệu chuẩn (U / k)'],
+  ['rectangular', 'Giới hạn sai số (a / √3)'],
+  ['triangular', 'Phân bố tam giác (a / √6)'],
+  ['scale', 'Cân theo MPE hoặc độ chia'],
+  ['repeat', 'Dãy đo lặp (loại A)'],
   ['pump', 'Trụ bơm: 0,5% / √3'],
   ['scale5', 'Cân 5 tấn: e = 5 kg'],
   ['scale50', 'Cân 50 tấn: e = 15 kg'],
   ['electric', 'Công tơ điện: u = 0,1%'],
 ];
 
+const activityNumericMethods = {
+  'u-shape': [['limit', 'Giới hạn sai số ±a (%)']],
+  calibration: [['expanded', 'U mở rộng (%)'], ['k', 'Hệ số phủ k trên giấy hiệu chuẩn']],
+  rectangular: [['limit', 'Giới hạn sai số ±a (%)']],
+  triangular: [['limit', 'Giới hạn sai số ±a (%)']],
+  scale: [['scaleValue', 'MPE hoặc một độ chia (kg)'], ['mass', 'Khối lượng cân tương ứng (kg)']],
+};
+
+function activityStandardUncertainty(method, data) {
+  const inputs = activityNumericMethods[method] || [];
+  if (inputs.some(([name]) => data[name] == null || data[name] === '' || !Number.isFinite(Number(data[name])) || Number(data[name]) < 0)) return NaN;
+  if (method === 'calibration') return Number(data.k) > 0 ? Number(data.expanded) / Number(data.k) : NaN;
+  if (method === 'scale') return Number(data.mass) > 0 ? 100 * Number(data.scaleValue) * (data.scaleBasis === 'mpe' ? 1.5 : .5) / Math.sqrt(3) / Number(data.mass) : NaN;
+  if (method === 'repeat') {
+    const values = String(data.samples || '').trim().split(/[;\s]+/).filter(Boolean).map(value => Number(value.replace(',', '.')));
+    if (values.length < 2 || values.some(value => !Number.isFinite(value) || value < 0)) return NaN;
+    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+    if (!(average > 0)) return NaN;
+    return E.sd(values) / (data.repeatMean === 'mean' ? Math.sqrt(values.length) : 1) / average * 100;
+  }
+  return Number(data.limit) / ({ 'u-shape': 2, rectangular: Math.sqrt(3), triangular: Math.sqrt(6) }[method]);
+}
+
 function activityUncertaintyFields(row) {
-  const useHalfWidth = row.adHalfWidth !== undefined;
-  return selectField('Cách xác định u số liệu hoạt động', 'preset', activityUncertaintyPresets, useHalfWidth ? 'u-shape' : 'custom')
+  const method = row.adMethod || (row.adHalfWidth !== undefined ? 'u-shape' : 'custom');
+  const values = row.adInputs || { limit: row.adHalfWidth };
+  const panels = Object.entries(activityNumericMethods).map(([id, fields]) => `<div class="span2" data-ad-method="${id}" hidden><div class="form-grid">
+    ${fields.map(([name, label]) => field(label, id + '-' + name, values[name], 'number', 'min="0" step="any" required')).join('')}
+    ${id === 'scale' ? selectField('Cơ sở tính', 'scaleBasis', [['division', 'Một độ chia d · d / (2√3)'], ['mpe', 'MPE · 1,5 × MPE / √3 theo slide']], values.scaleBasis || 'division') : ''}
+  </div></div>`).join('');
+  return selectField('Cách xác định u số liệu hoạt động', 'preset', activityUncertaintyPresets, method)
     + field('u số liệu hoạt động chuẩn (%)', 'ad', row.ad, 'number', 'min="0" step="any" required')
-    + `<div class="span2" ${useHalfWidth ? '' : 'hidden'}>
-      ${field('Giới hạn sai số ±a (%)', 'adHalfWidth', row.adHalfWidth ?? '', 'number', 'min="0" step="any"')}
-      <small class="source-text">Nhập độ lớn của một phía. Ví dụ, giới hạn ±0,5% thì nhập 0.5 để được u = 0,25%.</small>
-    </div>`;
+    + panels
+    + `<div class="span2" data-ad-method="repeat" hidden>
+      <label class="field">Giá trị đo lặp cùng đơn vị<textarea name="samples" required placeholder="Ví dụ: 99,8; 100; 100,2">${esc(values.samples)}</textarea></label>
+      ${selectField('Đại lượng báo cáo', 'repeatMean', [['mean', 'Trung bình phép đo · s / √n'], ['single', 'Một phép đo · s']], values.repeatMean || 'mean')}
+    </div>`
+    + field('Mã nhóm sai số AD dùng chung (nếu có)', 'adGroup', row.adGroup, 'text', 'maxlength="80"');
 }
 
 function bindActivityUncertainty(form) {
-  const { preset, ad, adHalfWidth } = form.elements;
-  const group = adHalfWidth.parentElement.parentElement;
+  const { preset, ad } = form.elements;
+  const panels = [...form.querySelectorAll('[data-ad-method]')];
   const suggestions = {
     pump: .5 / Math.sqrt(3),
     scale5: 5 / Math.sqrt(3) / 5000 * 100,
@@ -29,14 +64,18 @@ function bindActivityUncertainty(form) {
     electric: .1,
   };
   let previousValue = ad.value;
-  const update = () => { ad.value = adHalfWidth.value === '' ? '' : adHalfWidth.valueAsNumber / 2; };
+  const update = () => {
+    if (!ad.readOnly) return;
+    const value = activityStandardUncertainty(preset.value, activityMethodData(new FormData(form), preset.value));
+    ad.value = Number.isFinite(value) ? value : '';
+  };
   const applyPreset = () => {
-    const useHalfWidth = preset.value === 'u-shape';
-    group.hidden = !useHalfWidth;
-    adHalfWidth.disabled = !useHalfWidth;
-    adHalfWidth.required = useHalfWidth;
-    ad.readOnly = useHalfWidth;
-    if (useHalfWidth) {
+    for (const panel of panels) {
+      panel.hidden = panel.dataset.adMethod !== preset.value;
+      for (const element of panel.querySelectorAll('input, select, textarea')) element.disabled = panel.hidden;
+    }
+    ad.readOnly = panels.some(panel => !panel.hidden);
+    if (ad.readOnly) {
       if (ad.value !== '') previousValue = ad.value;
       update();
     } else if (Object.hasOwn(suggestions, preset.value)) {
@@ -46,16 +85,55 @@ function bindActivityUncertainty(form) {
     }
   };
   preset.addEventListener('change', applyPreset);
-  adHalfWidth.addEventListener('input', update);
+  for (const panel of panels) {
+    panel.addEventListener('input', update);
+    panel.addEventListener('change', update);
+  }
   applyPreset();
+}
+
+function activityMethodData(data, method) {
+  const result = Object.fromEntries((activityNumericMethods[method] || []).map(([name]) => [name, data.get(method + '-' + name)]));
+  if (method === 'scale') result.scaleBasis = data.get('scaleBasis');
+  if (method === 'repeat') Object.assign(result, { samples: data.get('samples'), repeatMean: data.get('repeatMean') });
+  return result;
 }
 
 function readActivityUncertainty(data, row) {
   delete row.adHalfWidth;
-  if (data.get('preset') === 'u-shape') {
-    const halfWidth = data.get('adHalfWidth');
-    row.adHalfWidth = halfWidth === '' ? '' : Number(halfWidth);
-    row.ad = halfWidth === '' ? '' : row.adHalfWidth / 2;
+  delete row.adMethod;
+  delete row.adInputs;
+  const method = data.get('preset');
+  if (Object.hasOwn(activityNumericMethods, method) || method === 'repeat') {
+    row.adMethod = method;
+    row.adInputs = activityMethodData(data, method);
+    row.ad = activityStandardUncertainty(method, row.adInputs);
+  }
+  row.adGroup = String(data.get('adGroup') || '').trim();
+}
+
+function isCylinderSource(row) {
+  return row.group === 5 && row.factor === 'CO2' && row.mode === 'annual';
+}
+
+function cylinderFields(row, amountLabel) {
+  const cylinders = row.pcccInput === 'cylinders';
+  return selectField('Cách nhập CO₂ chữa cháy', 'pcccInput', [['direct', 'Tổng kg CO₂ đã xả'], ['cylinders', 'Số bình × kg CO₂ đã xả mỗi bình']], cylinders ? 'cylinders' : 'direct') +
+    (cylinders ? `<div class="form-grid">${field('Số bình đã xả', 'pcccCount', row.pcccCount, 'number', 'min="0" step="1" required')}
+    ${field('CO₂ đã xả mỗi bình (kg)', 'pcccKg', row.pcccKg, 'number', 'min="0" step="any" required')}</div>`
+      : field(amountLabel, 'amount', row.amount, 'number', 'min="0" step="any" required'));
+}
+
+function readCylinderInput(data, row) {
+  if (isCylinderSource(row) && data.get('pcccInput') === 'cylinders') {
+    row.pcccInput = 'cylinders';
+    row.pcccCount = data.get('pcccCount') ?? '';
+    row.pcccKg = data.get('pcccKg') ?? '';
+    row.amount = Number(row.pcccCount) * Number(row.pcccKg);
+  } else if (isCylinderSource(row)) {
+    delete row.pcccInput;
+    delete row.pcccCount;
+    delete row.pcccKg;
   }
 }
 

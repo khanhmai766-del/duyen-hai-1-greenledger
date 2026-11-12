@@ -62,7 +62,7 @@ async function exportExcelWorkbook(database, period) {
       }
     }
     if (spec.name === 'Hoat dong') {
-      sheet.autoFilter = { from: 'A6', to: 'AC' + Math.max(6, period.rows.length + 6) };
+      sheet.autoFilter = { from: 'A6', to: 'AI' + Math.max(6, period.rows.length + 6) };
       for (let r = 7; r <= period.rows.length + 6; r++) sheet.getCell('D' + r).dataValidation = { type: 'list', allowBlank: false, formulae: ['"annual,monthly"'] };
     }
     if (spec.name === 'He so') {

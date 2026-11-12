@@ -33,12 +33,23 @@ function createExcelModel(db, period, engine) {
   }
   const totals = sheet('Tong hop', [34, 20, 19, 19, 19, 20, 22, 22]);
   const calc = sheet('Tinh toan', [30, 20, 19, 22, 18, 22, 22]);
-  const activity = sheet('Hoat dong', [40, 32, 28, 15, 18, ...Array(12).fill(13), 18, 14, 16, 20, 24, 30, 18, 18, 14, 14, 20, 14]);
+  const activity = sheet('Hoat dong', [40, 32, 28, 15, 18, ...Array(12).fill(13), 18, 14, 16, 20, 24, 30, 18, 18, 14, 14, 20, 14, 14, 14, 17, 24, 19, 36]);
   const factors = sheet('He so', [24, 34, 18, 17, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 14, 70, 16, 16, 16, 16]);
   const report = sheet('Mau 06', [34, 18, 16, 16, 16, 16]);
   const annex = sheet('Phu luc nguon', [30, 23, 13, 14, 15, 16, 16, 16, 16, 16, 16, 38, 52]);
   const review = sheet('Ra soat DKBDB', [23, 30, 34, 25, 17, 45]);
   const crosswalk = sheet('Doi chieu TT38', [19, 32, 48, 54, 42]);
+  const components = sheet('Thanh phan u', [34, 15, 28, 16, 21, 4, 16, 21, 15, 16, 21, 21]);
+  const correlation = period.correlateShared ? 'Tương quan +1 cho các đầu vào được ghép theo mã.' : 'Các nguồn được tổng hợp độc lập.';
+  const methodNote = 'Cộng ảnh hưởng của một đầu vào lên nhiều khí trong cùng nguồn. ' + correlation;
+  title(components, 'Thành phần độ không đảm bảo chuẩn (tCO₂e)', 'L');
+  row(components, 4, ['Nguồn', 'Nhóm', 'Thành phần', 'Mã ghép', 'u đóng góp', null, 'Mã ghép', 'u toàn cơ sở', 'Nhóm', 'Mã ghép', 'u theo nhóm', 'Bình phương']);
+  components.headers.push(4);
+  const termKeys = new Map(), groupKeys = new Map();
+  const termLabels = { ad: 'Số liệu hoạt động', n: 'Nồng độ N', cod: 'COD', other: 'Hệ số / thông số',
+    gwp: 'GWP', blend: 'GWP thành phần', grid: 'EF điện', ncv: 'Nhiệt trị NCV',
+    co2: 'EF CO₂', ch4: 'EF CH₄', n2o: 'EF N₂O' };
+  let termLine = 5;
   report.wrapped = [];
   annex.wrapped = [];
   review.wrapped = [];
@@ -46,7 +57,7 @@ function createExcelModel(db, period, engine) {
   title(factors, 'Hệ số và phương pháp áp dụng', 'H');
   row(factors, 4, ['Bộ GWP (1=AR4, 2=AR5, 3=AR6)', ['ar4', 'ar5', 'ar6'].indexOf(period.gwp) + 1]);
   row(factors, 5, ['u hỗn hợp (1=có trọng số, 0=không)', period.weighted ? 1 : 0]);
-  row(factors, 6, ['Hệ số phủ 95%', 1.96]);
+  row(factors, 6, ['Hệ số phủ (95% xấp xỉ)', summary.k]);
   row(factors, 7, ['kg / tấn', 1000]);
   row(factors, 8, ['kg / Gg', 1000000]);
   row(factors, 9, ['Giờ / ngày', 24]);
@@ -105,15 +116,20 @@ function createExcelModel(db, period, engine) {
   cursor += 3;
   factors.headers.push(cursor);
   row(factors, cursor++, ['Mã điện lưới', 'Năm', 'EF tCO₂/MWh', 'Nguồn']);
-  const gridStart = cursor;
   for (const factor of db.grid) { grid[factor.id] = cursor; row(factors, cursor++, [factor.id, factor.year, factor.value, factor.source]); }
-  row(factors, 12, ['SD chuỗi EF điện', null]);
-  cell(factors, 'B12', engine.sd(db.grid.map(g => g.value)), db.grid.length > 1 ? `STDEV(C${gridStart}:C${cursor - 1})` : '0', '0.000000');
+  const gridHistory = engine.gridSeries(period, db);
+  const gridHistoryRefs = gridHistory.map(entry => {
+    if (entry.id) return 'C' + grid[entry.id];
+    row(factors, cursor, ['Tham chiếu SD', entry.year, entry.value, entry.source]);
+    return 'C' + cursor++;
+  });
+  row(factors, 12, ['SD chuỗi EF điện', null, gridHistory.map(item => item.year).join(', ')]);
+  cell(factors, 'B12', engine.sd(gridHistory.map(g => g.value)), gridHistoryRefs.length > 1 ? `STDEV(${gridHistoryRefs.join(',')})` : '0', '0.000000');
   title(activity, 'Số liệu hoạt động năm ' + period.year, 'H');
   row(activity, 4, ['Màu vàng là số liệu đầu vào. Tổng năm tự cộng 12 tháng khi chế độ là monthly.']);
   activity.merges.push('A4:L4');
   activity.headers.push(6);
-  row(activity, 6, ['Mã dòng', 'Tên nguồn', 'Nhóm', 'Chế độ', 'Tổng năm nhập', ...Array.from({ length: 12 }, (_, i) => 'Tháng ' + (i + 1)), 'Tổng sử dụng', 'u AD', 'ĐVT', 'Mã hệ số', 'Thiết bị', 'Chứng từ', 'N kg/m³', 'COD kg/m³', 'u N', 'u COD', 'Mã MCF', 'Tính CH₄ 1/0']);
+  row(activity, 6, ['Mã dòng', 'Tên nguồn', 'Nhóm', 'Chế độ', 'Tổng năm nhập', ...Array.from({ length: 12 }, (_, i) => 'Tháng ' + (i + 1)), 'Tổng sử dụng', 'u AD', 'ĐVT', 'Mã hệ số', 'Thiết bị', 'Chứng từ', 'N kg/m³', 'COD kg/m³', 'u N', 'u COD', 'Mã MCF', 'Tính CH₄ 1/0', 'Số bình CO₂', 'kg CO₂/bình', 'u số người 1/0', 'Mã nhóm u AD', 'Phương pháp u AD', 'Dữ liệu tính u AD']);
   title(calc, 'Chi tiết tính phát thải và độ không đảm bảo đo', 'G');
   row(calc, 4, ['Các kết quả dùng tCO₂e. CO₂ sinh học được báo cáo riêng.']);
   calc.merges.push('A4:G4');
@@ -124,11 +140,28 @@ function createExcelModel(db, period, engine) {
   const gw = id => f('G', gr[id]);
   const gu = id => f('J', gr[id]);
   const divisor = f('B', 7);
+  function termRatio(term, { a, B, ad, source }) {
+    if (term.kind === 'ad') return ref('Tinh toan', ad);
+    if (term.kind === 'n' || term.kind === 'cod') return ref('Hoat dong', (term.kind === 'n' ? 'Z' : 'AA') + a);
+    if (term.kind === 'other') return term.id === 'PERSON' ? `IF(${ref('Hoat dong','AF' + a)}=1,${ou(term.id)},0)` : ou(term.id);
+    if (term.kind === 'gwp') return gu(term.id);
+    if (term.kind === 'blend') return `IF(${ref('Tinh toan',B(3))}=0,0,${f('F',gr[term.id])}*IF(${f('B',5)}=1,${term.weight},1)/${ref('Tinh toan',B(3))})`;
+    if (term.kind === 'grid') return `IF(${f('C',grid[source.factor])}=0,0,${f('B',12)}/${f('C',grid[source.factor])})`;
+    return f({ ncv:'S', co2:'T', ch4:'U', n2o:'V' }[term.kind],fr[term.id]);
+  }
   summary.rows.forEach((result, index) => {
     const source = result.row, a = index + 7, r = 7 + index * 27;
     const units = source.group < 2 ? db.fuels.find(x => x.id === source.factor).unit : ['', '', 'giờ công', 'm³', 'kg', 'kg', 'tấn', 'kWh'][source.group];
     row(activity, a, [source.id, source.name, engine.groups[source.group], source.mode, source.amount, ...source.months, null, source.ad / 100, units, source.factor, source.device || '', source.evidence || '', source.nitrogen ?? 0, source.cod ?? 0, (source.nU || 0) / 100, (source.codU || 0) / 100, source.mcf || '', source.includeCH4 ? 1 : 0]);
-    cell(activity, 'R' + a, result.amount, `IF(D${a}="monthly",SUM(F${a}:Q${a}),E${a})`, format);
+    const cylinders = source.group === 5 && source.factor === 'CO2' && source.pcccInput === 'cylinders';
+    const annualAmount = cylinders ? `AD${a}*AE${a}` : `E${a}`;
+    cell(activity, 'R' + a, result.amount, `IF(D${a}="monthly",SUM(F${a}:Q${a}),${annualAmount})`, format);
+    for (const [columnName, value] of Object.entries({
+      AD: cylinders ? Number(source.pcccCount) : '', AE: cylinders ? Number(source.pcccKg) : '',
+      AF: source.personUncertain === false ? 0 : 1, AG: source.adGroup || '',
+      AH: source.adMethod || (source.adHalfWidth != null ? 'U-shape (a / 2)' : 'u trực tiếp'),
+      AI: source.adInputs ? JSON.stringify(source.adInputs) : source.adHalfWidth ?? '',
+    })) cell(activity, columnName + a, value);
     for (const col of ['S', 'Z', 'AA']) cell(activity, col + a, col === 'S' ? source.ad / 100 : (source[col === 'Z' ? 'nU' : 'codU'] || 0) / 100, null, percent);
     cell(calc, 'A' + r, source.name);
     calc.sections.push(r);
@@ -174,20 +207,20 @@ function createExcelModel(db, period, engine) {
       metric(7, 'EF', val('BO_DOM') * val(source.mcf), `${B(5)}*${B(6)}`);
       raw[1] = tow * val('BO_DOM') * val(source.mcf); rawFormula[1] = `${B(4)}*${B(7)}`;
       gwp[1] = db.gases.find(g => g.id === 'CH4_BIO')[period.gwp]; gwpFormula[1] = gw('CH4_BIO');
-      uFormula[1] = `SQRT(${[ad, ou('PERSON'), ou('BOD'), ou('BO_DOM'), ou(source.mcf), gu('CH4_BIO')].map(x => x + '^2').join('+')})`;
+      uFormula[1] = `SQRT(${[ad, `IF(${ref('Hoat dong','AF' + a)}=1,${ou('PERSON')},0)`, ou('BOD'), ou('BO_DOM'), ou(source.mcf), gu('CH4_BIO')].map(x => x + '^2').join('+')})`;
     } else if (source.group === 3) {
       metric(3, 'N đầu ra', source.nitrogen, ref('Hoat dong', 'X' + a), 'kg N/m³');
       metric(4, 'N xả thải', result.amount * source.nitrogen, `${B(1)}*${B(3)}`, 'kg N');
       metric(5, 'COD', source.cod, ref('Hoat dong', 'Y' + a), 'kg COD/m³');
       metric(6, 'Tổng COD', result.amount * source.cod, `${B(1)}*${B(5)}`, 'kg COD');
-      metric(7, 'MCF', db.other.find(x => x.id === source.mcf).value, ov(source.mcf));
+      metric(7, 'MCF', db.other.find(x => x.id === source.mcf)?.value ?? 0, source.mcf ? ov(source.mcf) : '0');
       raw[2] = result.amount * source.nitrogen * db.other.find(x => x.id === 'EF_N').value * 44 / 28;
       rawFormula[2] = `${B(4)}*${ov('EF_N')}*${f('B', 11)}`;
       raw[1] = source.includeCH4 ? result.amount * source.cod * db.other.find(x => x.id === 'BO_IND').value * db.other.find(x => x.id === source.mcf).value : 0;
       rawFormula[1] = `IF(${ref('Hoat dong', 'AC' + a)}=1,${B(6)}*${ov('BO_IND')}*${B(7)},0)`;
       for (const [i, id] of [[1, 'CH4_BIO'], [2, 'N2O']]) { gwp[i] = db.gases.find(g => g.id === id)[period.gwp]; gwpFormula[i] = gw(id); }
       uFormula[2] = `SQRT(${ad}^2+${ref('Hoat dong', 'Z' + a)}^2+${ou('EF_N')}^2+${gu('N2O')}^2)`;
-      uFormula[1] = `IF(${ref('Hoat dong', 'AC' + a)}=1,SQRT(${ad}^2+${ref('Hoat dong', 'AA' + a)}^2+${ou('BO_IND')}^2+${ou(source.mcf)}^2+${gu('CH4_BIO')}^2),0)`;
+      uFormula[1] = `IF(${ref('Hoat dong', 'AC' + a)}=1,SQRT(${ad}^2+${ref('Hoat dong', 'AA' + a)}^2+${ou('BO_IND')}^2+${source.mcf ? ou(source.mcf) : 0}^2+${gu('CH4_BIO')}^2),0)`;
     } else if ([4, 5].includes(source.group)) {
       const g = gr[source.factor];
       metric(3, 'GWP môi chất', result.steps[0][1], f('G', g));
@@ -206,7 +239,7 @@ function createExcelModel(db, period, engine) {
       const value = db.grid.find(x => x.id === source.factor).value;
       metric(3, 'Điện năng', result.amount / 1000, `${B(1)}/${divisor}`, 'MWh');
       metric(4, 'EF điện', value, f('C', grid[source.factor]), 'tCO₂/MWh');
-      metric(5, 'SD chuỗi EF', engine.sd(db.grid.map(x => x.value)), f('B', 12));
+      metric(5, 'SD chuỗi EF', engine.sd(gridHistory.map(x => x.value)), f('B', 12));
       raw[0] = result.total * 1000; rawFormula[0] = `${B(3)}*${B(4)}*${divisor}`;
       uFormula[0] = `SQRT(${ad}^2+IF(${B(4)}=0,0,(${B(5)}/${B(4)})^2))`;
     }
@@ -223,7 +256,22 @@ function createExcelModel(db, period, engine) {
     });
     metric(15, 'CO₂ sinh học báo cáo riêng', result.bio, biologicalFormula, 'tấn CO₂');
     metric(16, 'Tổng phát thải', result.total, `SUM(D${gasRows[0]}:D${gasRows[3]})`, 'tCO₂e');
-    metric(17, 'u chuẩn', result.u, `SQRT(SUMSQ(F${gasRows[0]}:F${gasRows[3]}))`, 'tCO₂e');
+    const sourceTerms = new Map();
+    for (const term of result.terms) {
+      if (!termKeys.has(term.key)) termKeys.set(term.key, { id: termKeys.size + 1, value: 0 });
+      const item = termKeys.get(term.key);
+      item.value += term.value;
+      const groupKey = source.group + ':' + item.id;
+      if (!groupKeys.has(groupKey)) groupKeys.set(groupKey, { group: source.group, id: item.id, value: 0 });
+      groupKeys.get(groupKey).value += term.value;
+      row(components, termLine, [source.name, engine.groups[source.group], termLabels[term.kind] + (term.id ? ' · ' + term.id : ''), item.id]);
+      const emissionCells = term.indices.map(i => ref('Tinh toan','D' + gasRows[i])).join('+');
+      const address = cell(components, 'E' + termLine++, term.value, `(${emissionCells})*${termRatio(term,{ a,B,ad,source })}`, format);
+      if (!sourceTerms.has(item.id)) sourceTerms.set(item.id, []);
+      sourceTerms.get(item.id).push(ref(components.name,address));
+    }
+    const termsFormula = [...sourceTerms.values()].map(items => items.length === 1 ? items[0] : '(' + items.join('+') + ')');
+    metric(17, 'u chuẩn', result.u, `SQRT(SUMSQ(${termsFormula.join(',') || '0'}))`, 'tCO₂e');
     metric(18, 'U mở rộng 95%', result.U, `${B(17)}*${f('B', 6)}`, 'tCO₂e');
     metric(19, 'U tương đối 95%', result.total ? result.U / result.total : 0, `IF(${B(16)}=0,0,${B(18)}/${B(16)})`);
     calc.cells[calc.cells.length - 1].numberFormat = percent;
@@ -231,6 +279,20 @@ function createExcelModel(db, period, engine) {
     row(calc, r + 23, ['Ghi chú', result.warnings.join(' ')]); calc.merges.push(`B${r + 23}:G${r + 23}`);
     outputRefs.push({ total: ref('Tinh toan', B(16)), u: ref('Tinh toan', B(17)), U: ref('Tinh toan', B(18)), bio: ref('Tinh toan', B(15)), gas: gasRows.map(g => ref('Tinh toan', 'D' + g)), group: source.group, result, activityRow: a, calcRow: r, units });
   });
+  let subtotalLine = 5;
+  for (const { id, value } of termKeys.values()) {
+    cell(components,'G' + subtotalLine,id);
+    cell(components,'H' + subtotalLine,value,`SUMIF(D5:D${termLine-1},G${subtotalLine},E5:E${termLine-1})`,format);
+    subtotalLine++;
+  }
+  let groupLine = 5;
+  for (const { group, id, value } of groupKeys.values()) {
+    cell(components,'I' + groupLine,engine.groups[group]);
+    cell(components,'J' + groupLine,id);
+    cell(components,'K' + groupLine,value,`SUMIFS(E5:E${termLine-1},D5:D${termLine-1},J${groupLine},B5:B${termLine-1},I${groupLine})`,format);
+    cell(components,'L' + groupLine,value**2,`K${groupLine}^2`,format);
+    groupLine++;
+  }
   title(totals, 'Báo cáo kiểm kê khí nhà kính năm ' + period.year, 'H');
   row(totals, 4, ['Cơ sở', period.facility]); totals.merges.push('B4:H4');
   row(totals, 5, ['Ranh giới', period.boundary]); totals.merges.push('B5:H5');
@@ -242,17 +304,18 @@ function createExcelModel(db, period, engine) {
     row(totals, r, [engine.groups[i], i === 7 ? '2' : '1']);
     [0, 1, 2, 3].forEach(g => cell(totals, column(g + 3) + r, selected.reduce((s, x) => s + x.result.gases[g], 0), selected.map(x => x.gas[g]).join('+') || '0', format));
     cell(totals, 'G' + r, summary.groups[i], `SUM(C${r}:F${r})`, format);
-    cell(totals, 'H' + r, engine.rss(selected.map(x => x.result.u)), selected.length ? 'SQRT(' + selected.map(x => x.u + '^2').join('+') + ')' : '0', format);
+    cell(totals, 'H' + r, engine.combineUncertainty(selected.map(x => x.result)), groupLine > 5
+      ? `SQRT(SUMIF(${ref(components.name,'I5:I' + (groupLine-1))},A${r},${ref(components.name,'L5:L' + (groupLine-1))}))` : '0', format);
   }
   row(totals, 18, ['Tổng phạm vi 1 + 2']);
   cell(totals, 'G18', summary.total, 'SUM(G9:G16)', format);
-  cell(totals, 'H18', summary.u, 'SQRT(SUMSQ(H9:H16))', format);
+  cell(totals, 'H18', summary.u, subtotalLine > 5 ? `SQRT(SUMSQ(${ref(components.name,'H5:H' + (subtotalLine-1))}))` : '0', format);
   row(totals, 20, ['CO₂ sinh học báo cáo riêng']); cell(totals, 'G20', summary.bio, outputRefs.map(x => x.bio).join('+') || '0', format);
   row(totals, 21, ['U mở rộng 95% (tCO₂e)']); cell(totals, 'G21', summary.U, `H18*${f('B', 6)}`, format);
   row(totals, 22, ['U tương đối 95%']); cell(totals, 'G22', summary.percent / 100, 'IF(G18=0,0,G21/G18)', percent);
   const notes = [
     'Ô vàng là số liệu đầu vào. Các ô công thức tính lại khi mở và chỉnh sửa trong Excel.',
-    'u các thành phần giả định độc lập. U = 1,96 × u. Biên Lower/Upper được quy đổi theo mô tả trong prompt.',
+    methodNote + ' Hệ số phủ k = ' + summary.k + '. Xem Thanh phan u để truy xuất phép tổng hợp.',
     'Urê dùng u EF trong Thư viện hệ số. Với EF mặc định Tier 1, u EF = 0 theo giả định toàn bộ C trong urê phát thải.',
     'SD hệ số điện giữa các năm là giả định về độ biến động theo prompt. u GWP cho AR4/AR5 quy đổi theo dữ liệu AR6.',
     ...new Set(summary.rows.flatMap(x => x.warnings)),
@@ -295,7 +358,7 @@ function createExcelModel(db, period, engine) {
   reportField(27, 'CO₂ sinh học riêng (tấn CO₂)', summary.bio, ref('Tong hop', 'G20'), format);
   reportField(28, 'U 95% (± tCO₂e)', summary.U, ref('Tong hop', 'G21'), format);
   reportField(29, 'U tương đối 95%', summary.percent / 100, ref('Tong hop', 'G22'), percent);
-  reportField(30, 'Giả định về độ không đảm bảo', 'U 95% = 1,96 × u tổng, cộng theo căn tổng bình phương và giả định độc lập. Xem Ra soat DKBDB để kiểm tra hệ số, GWP và thiết bị dùng chung.', null, null, 44);
+  reportField(30, 'Giả định về độ không đảm bảo', 'U mở rộng = ' + summary.k + ' × u tổng. ' + methodNote + ' Xem Ra soat DKBDB.', null, null, 44);
   reportField(31, 'Độ tin cậy và tính đầy đủ', period.notes || 'Bổ sung đánh giá của cơ sở trước khi ký.', null, null, 56);
   reportField(33, 'Đại diện cơ sở', 'Ký, ghi rõ họ tên, chức vụ và ngày lập', null, null, 45);
   reportLine(35, 'Tham chiếu: Mẫu số 06, Phụ lục II của Nghị định 06/2022/NĐ-CP. Hoàn thiện thông tin và đối chiếu quy định áp dụng cho kỳ báo cáo trước khi nộp.', 44);
@@ -327,7 +390,7 @@ function createExcelModel(db, period, engine) {
     target.wrapped.push(['A' + number, height]);
   }
   title(review, 'Rà soát độ không đảm bảo đo', 'F');
-  mergedLine(review, 4, 'Kết quả hiện tại giả định độc lập giữa các thành phần và các nguồn. Sai số cùng chiều từ đầu vào dùng chung có thể làm U lớn hơn kết quả đang hiển thị.', 'F', 32);
+  mergedLine(review, 4, methodNote + ' Xem Thanh phan u để đối chiếu từng thành phần. Đổi thiết lập tương quan trong GreenLedger rồi xuất lại.', 'F', 32);
   mergedLine(review, 5, 'Danh sách ghi nhận lúc xuất Excel, dựa trên các nguồn có phát thải dương. Để cập nhật danh sách, sửa dữ liệu trong ứng dụng rồi xuất lại.', 'F', 32);
   mergedLine(review, 6, 'Kiểm tra mã thiết bị, chứng thư hiệu chuẩn và nguồn gốc hệ số. Khi xác nhận sai số chung, đánh giá mức tương quan và ghi cách xử lý trong hồ sơ theo IPCC 2006, Quyển 1, Chương 3.', 'F', 32);
   mergedLine(review, 7, 'Độ lệch chuẩn hệ số điện theo năm chỉ đại diện biến động. u GWP hỗn hợp phụ thuộc lựa chọn trọng số trong Phương pháp & giả định. N₂O nước thải dùng tải lượng N tại điểm xả.', 'F', 32);
