@@ -8,6 +8,8 @@ const files = [
   ['/login.css', 'login.css', 'text/css; charset=utf-8'],
   ['/engine.js', 'engine.js', 'text/javascript; charset=utf-8'],
   ['/app.js', 'app.js', 'text/javascript; charset=utf-8'],
+  ['/calorific.js', 'calorific.js', 'text/javascript; charset=utf-8'],
+  ['/calorific.css', 'calorific.css', 'text/css; charset=utf-8'],
   ['/duyen-hai.png', 'duyen-hai.png', 'image/png'],
 ];
 
