@@ -9,6 +9,33 @@ const historicalGrid = [[2014,.6612],[2015,.8154],[2016,.9185],[2017,.8649],[201
   .map(([year,value])=>({year,value,source:'Chuỗi tham chiếu bài tập ĐKĐBĐ, hệ số 2022 đối chiếu bảng lịch sử QUACERT.'}));
 const coverage = period => period.coverageFactor ?? 1.96;
 
+function assessReliability(data = {}) {
+  const { activity, factor, objective, detail, crosscheck } = data ?? {};
+  const points = [1, 2, 3, 4];
+  // The slides give individual points and cut-offs. Compare the combined score at the same two-decimal precision.
+  const score = points.includes(activity) && points.includes(factor)
+    ? Math.round(Math.hypot(activity, factor) * 100) / 100 : null;
+  const grade = score === null ? null : score <= 2.24 ? 'A' : score <= 4.24 ? 'B' : score <= 5 ? 'C' : 'D';
+  const checks = [objective, detail, crosscheck];
+  const passed = checks.every(value => value === 'pass' || value === 'fail')
+    ? checks.filter(value => value === 'pass').length : null;
+  const level = passed === null ? null : ['Không có độ tin cậy', 'Thấp', 'Trung bình', 'Cao'][passed];
+  return { score, grade, passed, level };
+}
+
+function reliabilitySummary(results) {
+  const graded = results.filter(({row}) => assessReliability(row.reliability).grade !== null);
+  const checked = results.filter(({row}) => assessReliability(row.reliability).passed !== null);
+  const ready = results.filter(({row}) => {
+    const status = assessReliability(row.reliability);
+    return status.grade !== null && status.passed !== null;
+  });
+  const total = results.reduce((sum, item) => sum + item.total, 0);
+  const reviewed = ready.reduce((sum, item) => sum + item.total, 0);
+  return { count: results.length, graded: graded.length, checked: checked.length, complete: ready.length,
+    coverage: total > 0 ? reviewed / total : null };
+}
+
 function gridSeries(period, db) {
   if (period.gridFrom == null && period.gridTo == null) return db.grid.slice().sort((a,b)=>a.year-b.year);
   const years = new Map(historicalGrid.map(entry=>[entry.year,entry]));
@@ -137,5 +164,5 @@ function sharedInputs(results, db) {
   return [...inputs.values()].filter(item => item.rows.size > 1)
     .map(({ kind, label, rows }) => ({ kind, label, rows: [...rows.values()] }));
 }
-return {seed,calculate,summary,validate,groups,uid,rss,sd,sharedInputs,coverage,gridSeries,combineUncertainty};})();
+return {seed,calculate,summary,validate,groups,uid,rss,sd,sharedInputs,coverage,gridSeries,combineUncertainty,assessReliability,reliabilitySummary};})();
 if(typeof module!=='undefined')module.exports=Engine;

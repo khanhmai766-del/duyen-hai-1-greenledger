@@ -11,9 +11,10 @@ async function exportExcelWorkbook(database, period) {
       : spec.name === 'He so' ? [{ state: 'frozen', xSplit: 2, showGridLines: false }]
       : spec.name === 'Phu luc nguon' ? [{ state: 'frozen', ySplit: 5, showGridLines: false }]
       : spec.name === 'Ra soat DKBDB' ? [{ state: 'frozen', ySplit: 8, showGridLines: false }]
+      : spec.name === 'Do tin cay' ? [{ state: 'frozen', ySplit: 8, xSplit: 2, showGridLines: false }]
       : [{ showGridLines: false }];
-    const report = spec.name === 'Mau 06';
-    const fitWidth = report || ['Tong hop', 'Phu luc nguon', 'Ra soat DKBDB', 'Doi chieu TT38'].includes(spec.name);
+    const report = spec.name === 'Mau 06' || spec.name === 'Bao cao co so';
+    const fitWidth = report || ['Tong hop', 'Phu luc nguon', 'Ra soat DKBDB', 'Doi chieu TT38', 'Do tin cay'].includes(spec.name);
     const sheet = book.addWorksheet(spec.name, {
       views,
       pageSetup: { paperSize: 9, orientation: report ? 'portrait' : 'landscape', fitToPage: true, fitToWidth: fitWidth ? 1 : 0, fitToHeight: 0 },
@@ -64,6 +65,17 @@ async function exportExcelWorkbook(database, period) {
     if (spec.name === 'Hoat dong') {
       sheet.autoFilter = { from: 'A6', to: 'AI' + Math.max(6, period.rows.length + 6) };
       for (let r = 7; r <= period.rows.length + 6; r++) sheet.getCell('D' + r).dataValidation = { type: 'list', allowBlank: false, formulae: ['"annual,monthly"'] };
+    }
+    if (spec.name === 'Do tin cay') {
+      sheet.autoFilter = { from: 'A8', to: 'M' + Math.max(8, period.rows.length + 8) };
+      for (let r = 9; r <= period.rows.length + 8; r++) {
+        for (const col of ['C','D','G','H','I','K']) {
+          const input = sheet.getCell(col + r);
+          input.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3D6' } };
+          if (col === 'C' || col === 'D') input.dataValidation = { type: 'whole', operator: 'between', allowBlank: true, formulae: [1,4] };
+          if (['G','H','I'].includes(col)) input.dataValidation = { type: 'list', allowBlank: true, formulae: ['"Đạt,Không đạt"'] };
+        }
+      }
     }
     if (spec.name === 'He so') {
       sheet.getCell('B4').dataValidation = { type: 'whole', operator: 'between', formulae: [1, 3] };

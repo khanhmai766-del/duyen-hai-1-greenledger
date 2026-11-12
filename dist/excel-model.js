@@ -39,6 +39,10 @@ function createExcelModel(db, period, engine) {
   const annex = sheet('Phu luc nguon', [30, 23, 13, 14, 15, 16, 16, 16, 16, 16, 16, 38, 52]);
   const review = sheet('Ra soat DKBDB', [23, 30, 34, 25, 17, 45]);
   const crosswalk = sheet('Doi chieu TT38', [19, 32, 48, 54, 42]);
+  const facility = sheet('Bao cao co so', [38, 25, 20, 20, 20, 22]);
+  const quality = sheet('Do tin cay', [35, 25, 15, 15, 15, 12, 18, 18, 18, 25, 38, 22, 16]);
+  facility.wrapped = [];
+  quality.wrapped = [];
   const components = sheet('Thanh phan u', [34, 15, 28, 16, 21, 4, 16, 21, 15, 16, 21, 21]);
   const correlation = period.correlateShared ? 'Tương quan +1 cho các đầu vào được ghép theo mã.' : 'Các nguồn được tổng hợp độc lập.';
   const methodNote = 'Cộng ảnh hưởng của một đầu vào lên nhiều khí trong cùng nguồn. ' + correlation;
@@ -383,6 +387,89 @@ function createExcelModel(db, period, engine) {
     cell(annex, 'M' + line, result.source, ref('Tinh toan', 'B' + (calcRow + 21)));
     for (const col of ['A', 'B', 'L', 'M']) annex.wrapped.push([col + line, 54]);
   });
+
+  const reviewStats = engine.reliabilitySummary(summary.rows);
+  title(quality, 'Đánh giá độ tin cậy dữ liệu theo dòng nguồn', 'M');
+  row(quality, 4, ['Số nguồn đủ cả hai đánh giá']);
+  row(quality, 5, ['Tỷ lệ phát thải đã đánh giá đủ']);
+  mergedLine(quality, 6, 'Theo slide: x = ROUND(√(điểm dữ liệu² + điểm EF²), 2). Ngưỡng A ≤ 2,24, B ≤ 4,24, C ≤ 5,00, D > 5,00. Quy tắc gộp điểm được suy ra từ các ngưỡng.', 'M', 32);
+  mergedLine(quality, 7, 'Theo mẫu Word: 3/3 tiêu chí đạt = Cao, 2/3 = Trung bình, 1/3 = Thấp, 0/3 = Không có độ tin cậy. Ô trống nghĩa là chưa đánh giá.', 'M', 32);
+  row(quality, 8, ['Dòng nguồn', 'Nhóm', 'Điểm dữ liệu', 'Điểm EF', 'Điểm x', 'Cấp A–D', 'Căn cứ khách quan', 'Chi tiết / đại diện', 'Đối chứng', 'Mức theo Word', 'Căn cứ / nhận xét', 'Phát thải (tCO₂e)', 'Đánh giá đủ (1/0)']);
+  quality.headers.push(8);
+  outputRefs.forEach((entry, index) => {
+    const line = index + 9, source = entry.result.row, data = source.reliability || {};
+    const evaluation = engine.assessReliability(data);
+    const checkLabel = key => ({ pass:'Đạt', fail:'Không đạt' })[data[key]] || '';
+    const scoreInput = value => [1,2,3,4].includes(value) ? value : '';
+    cell(quality, 'A' + line, source.name, ref('Hoat dong', 'B' + entry.activityRow));
+    cell(quality, 'B' + line, engine.groups[source.group]);
+    cell(quality, 'C' + line, scoreInput(data.activity), null, '0');
+    cell(quality, 'D' + line, scoreInput(data.factor), null, '0');
+    const inputs = `C${line}:D${line}`;
+    const checks = `G${line}:I${line}`;
+    cell(quality, 'E' + line, evaluation.score, `IFERROR(IF(AND(COUNT(${inputs})=2,MIN(${inputs})>=1,MAX(${inputs})<=4,MOD(C${line},1)=0,MOD(D${line},1)=0),ROUND(SQRT(SUMSQ(${inputs})),2),""),"")`, '0.00');
+    cell(quality, 'F' + line, evaluation.grade, `IF(E${line}="","",IF(E${line}<=2.24,"A",IF(E${line}<=4.24,"B",IF(E${line}<=5,"C","D"))))`);
+    ['objective','detail','crosscheck'].forEach((key,i) => cell(quality, column(7+i) + line, checkLabel(key)));
+    cell(quality, 'J' + line, evaluation.level, `IF(COUNTIF(${checks},"Đạt")+COUNTIF(${checks},"Không đạt")<3,"",CHOOSE(COUNTIF(${checks},"Đạt")+1,"Không có độ tin cậy","Thấp","Trung bình","Cao"))`);
+    cell(quality, 'K' + line, data.note || '');
+    cell(quality, 'L' + line, entry.result.total, entry.total, format);
+    cell(quality, 'M' + line, evaluation.grade !== null && evaluation.level !== null ? 1 : 0, `IF(AND(F${line}<>"",J${line}<>""),1,0)`, '0');
+    quality.wrapped.push(['K' + line, 42]);
+  });
+  const qualityEnd = outputRefs.length + 8;
+  cell(quality, 'B4', reviewStats.complete, outputRefs.length ? `SUM(M9:M${qualityEnd})` : '0', '0');
+  cell(quality, 'B5', reviewStats.coverage, outputRefs.length
+    ? `IF(SUM(L9:L${qualityEnd})=0,"",SUMPRODUCT(L9:L${qualityEnd},M9:M${qualityEnd})/SUM(L9:L${qualityEnd}))` : '""', percent);
+
+  const profile = period.reportProfile || {};
+  const profileValue = value => value || 'Chưa khai báo';
+  const section = (line, label) => { mergedLine(facility, line, label, 'F', 27); facility.headers.push(line); };
+  const field = (line, label, value, formula, numberFormat) => {
+    cell(facility, 'A' + line, label);
+    cell(facility, 'B' + line, value ?? 'Chưa khai báo', formula, numberFormat);
+    facility.merges.push(`B${line}:F${line}`);
+    facility.wrapped.push(['A' + line, 42], ['B' + line, 42]);
+  };
+  title(facility, 'Báo cáo kết quả kiểm kê khí nhà kính', 'F');
+  mergedLine(facility, 3, `Năm ${period.year} · ${period.facility}`, 'F', 29);
+  field(4, 'Địa danh và ngày lập', profileValue([profile.place, profile.date ? String(profile.date).split('-').reverse().join('/') : ''].filter(Boolean).join(', ')));
+  section(6, 'MỞ ĐẦU');
+  field(7, 'Căn cứ pháp lý và kỹ thuật', profileValue(profile.references));
+  field(8, 'Tổ chức thực hiện kiểm kê', profileValue(profile.organization));
+  section(10, 'PHẦN I. THÔNG TIN CƠ SỞ');
+  const identification = [
+    ['Tên cơ sở',period.facility],['Địa chỉ',period.address],['Mã số thuế',profile.tax],
+    ['Đăng ký doanh nghiệp',period.license],['Đăng ký đầu tư',profile.project],['Giấy phép môi trường',profile.environmentPermit],
+    ['Đại diện pháp luật',period.representative],['Đầu mối phụ trách',period.contact],['Ủy quyền',profile.delegation],
+    ['Lĩnh vực hoạt động',period.sector],['Sản lượng, công suất và nhân sự',profile.production],
+  ];
+  identification.forEach(([label,value],i) => field(11+i,label,profileValue(value)));
+  section(23, 'PHẦN II. HOẠT ĐỘNG SẢN XUẤT KINH DOANH VÀ SỐ LIỆU');
+  field(24, 'Ranh giới và phạm vi', profileValue(period.boundary));
+  field(25, 'Cơ sở hạ tầng và công nghệ', profileValue(profile.infrastructure || period.operations));
+  field(26, 'Nguồn phát thải và bể hấp thụ', 'Xem Phu luc nguon. Bể hấp thụ: ' + profileValue(profile.sinks));
+  field(27, 'Hệ thống thông tin và dữ liệu', profileValue(profile.dataSystem));
+  field(28, 'Hạn chế dữ liệu', profileValue(profile.limitations));
+  section(30, 'PHẦN III. KẾT QUẢ THỰC HIỆN KIỂM KÊ');
+  field(31, '1. Phương pháp và hệ số', `GWP-100 ${period.gwp.toUpperCase()}. Xem Tinh toan và He so để kiểm tra phương pháp và nguồn hệ số.`);
+  field(32, '2. Số liệu hoạt động', 'Xem Hoat dong và Phu luc nguon để đối chiếu dữ liệu, thiết bị và chứng từ.');
+  field(33, '3. Phạm vi 1 (tCO₂e)', summary.scope1, `SUM(${ref('Tong hop','G9:G15')})`, format);
+  field(34, 'Phạm vi 2 (tCO₂e)', summary.scope2, ref('Tong hop','G16'), format);
+  field(35, 'Tổng (tCO₂e)', summary.total, ref('Tong hop','G18'), format);
+  field(36, 'CO₂ sinh học riêng (tấn CO₂)', summary.bio, ref('Tong hop','G20'), format);
+  field(37, 'U mở rộng (± tCO₂e)', summary.U, ref('Tong hop','G21'), format);
+  field(38, 'U tương đối', summary.percent / 100, ref('Tong hop','G22'), percent);
+  field(39, '4. Số nguồn đã đánh giá đủ', reviewStats.complete, ref(quality.name,'B4'), '0');
+  field(40, 'Tỷ lệ phát thải đã đánh giá đủ', reviewStats.coverage ?? '', `IF(${ref(quality.name,'B5')}="","",${ref(quality.name,'B5')})`, percent);
+  field(41, 'Kiểm soát và bảo đảm chất lượng', profileValue(profile.quality));
+  field(42, 'Tính đầy đủ, đại diện và ngoại lệ', profileValue(profile.completeness));
+  field(43, 'Kết luận và kế hoạch cải thiện', profileValue(profile.conclusion || period.notes));
+  field(44, 'Đại diện ký báo cáo', profileValue(period.representative));
+  field(45, 'Đơn vị tư vấn (nếu có)', profile.consultant || '');
+  section(47, 'PHỤ LỤC I. CÁC HỆ SỐ VÀ GIÁ TRỊ');
+  field(48, 'Nguồn tra cứu và giá trị', 'Xem He so, Tinh toan, Thanh phan u và Phu luc nguon.');
+  section(50, 'PHỤ LỤC II. VĂN BẢN PHÁP LÝ VÀ TÀI LIỆU');
+  field(51, 'Tài liệu áp dụng', profileValue(profile.references));
 
   function mergedLine(target, number, text, lastColumn, height) {
     cell(target, 'A' + number, text);
