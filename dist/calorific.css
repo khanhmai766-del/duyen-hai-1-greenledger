@@ -13,3 +13,22 @@
 }
 #calorific-result strong { font-size: 21px; font-variant-numeric: tabular-nums; }
 #calorific-result small { font-size: 11px; font-weight: 500; }
+#calorific-result p { margin: 2px 0; }
+#calorific-result td { text-align: right; font-variant-numeric: tabular-nums; }
+.lab-section {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+.lab-section h3 { margin: 0; font-size: 14px; }
+.lab-section summary { cursor: pointer; font-weight: 600; }
+.lab-section [hidden] { display: none; }
+.lab-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
+.lab-pair fieldset { display: grid; gap: 8px; min-width: 0; border: 1px solid var(--line); border-radius: 6px; }
+.lab-pair legend { padding: 0 4px; font-weight: 600; }
+@media (max-width: 540px) {
+  .lab-pair { grid-template-columns: 1fr; }
+}

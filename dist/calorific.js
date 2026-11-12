@@ -1,10 +1,18 @@
 'use strict';
 
 const calorificMethods = [
+  ['lab', 'Tính theo phiếu phân tích than'],
   ['ipcc', 'IPCC 2006 · Box 1.1'],
   ['iso', 'ISO 1928 · Công thức (18)'],
   ['convert', 'Chuyển đổi IPCC ↔ ISO'],
 ];
+
+const calorificUnits = [['mj', 'MJ/kg (hoặc TJ/Gg)'], ['j', 'J/g (hoặc kJ/kg)'], ['cal', 'cal/g (hoặc kcal/kg)']];
+
+function heatInMj(value, unit) {
+  if (unit === 'cal') return value * joulesPerCalorie / 1000;
+  return unit === 'j' ? value / 1000 : value;
+}
 
 // All heat values use MJ/kg and all composition inputs are percentage points.
 function calculateCalorific(mode, { heat, h, o, nitrogen, moisture, direction }) {
@@ -33,6 +41,7 @@ const calorificReferences = {
 };
 
 function calorificFields(mode, values) {
+  if (mode === 'lab') return calorificLabFields(values);
   const ipcc = mode === 'ipcc';
   const convert = mode === 'convert';
   const basis = ipcc ? 'than nhận về' : 'cơ sở khô';
@@ -46,7 +55,7 @@ function calorificFields(mode, values) {
   return `<div class="form-grid">
     ${convert ? selectField('Chiều chuyển đổi', 'direction', [['ipcc-iso', 'IPCC → ISO'], ['iso-ipcc', 'ISO → IPCC']], values.direction) : ''}
     ${field(heatLabel, 'heat', values.heat, 'number', 'required min="0" step="any"')}
-    ${selectField('Đơn vị đầu vào', 'heatUnit', [['mj', 'MJ/kg (hoặc TJ/Gg)'], ['j', 'J/g (hoặc kJ/kg)']], values.heatUnit)}
+    ${selectField('Đơn vị đầu vào', 'heatUnit', calorificUnits, values.heatUnit)}
     ${percent('Độ ẩm ' + (ipcc || convert ? 'toàn phần' : 'mục tiêu') + ' M (%)', 'moisture')}
     ${percent('Hydro H · ' + basis + ' (%)', 'h')}
     ${percent('Oxy O · ' + basis + ' (%)', 'o')}
@@ -63,39 +72,49 @@ function calorificFields(mode, values) {
 
 function openCalorificDialog() {
   const drafts = Object.fromEntries(calorificMethods.map(([id]) => [id, { heatUnit: 'mj', direction: 'ipcc-iso' }]));
-  let mode = 'ipcc';
-  modal('Quy đổi nhiệt trị than', `<div class="calorific-method">${selectField('Phương pháp', 'calorificMode', calorificMethods, mode)}</div>
+  let mode = 'lab';
+  modal('Công cụ tính nhiệt trị than', `<div class="calorific-method">${selectField('Phương pháp', 'calorificMode', calorificMethods, mode)}</div>
     <div id="calorific-fields"></div><output id="calorific-result" aria-live="polite" hidden></output>`, data => {
     const values = Object.fromEntries(data);
+    const result = form.querySelector('#calorific-result');
+    if (mode === 'lab') {
+      result.innerHTML = calorificLabResult(calculateLabCalorific(values));
+      result.hidden = false;
+      return false;
+    }
     const { net, difference } = calculateCalorific(mode, {
-      heat: Number(values.heat) / (values.heatUnit === 'j' ? 1000 : 1),
+      heat: heatInMj(Number(values.heat), values.heatUnit),
       h: Number(values.h), o: Number(values.o), nitrogen: Number(values.nitrogen),
       moisture: Number(values.moisture), direction: values.direction,
     });
     if (!Number.isFinite(net) || net <= 0) throw Error('Qnet phải lớn hơn 0. Kiểm tra đơn vị và các thông số đã nhập.');
-    const result = form.querySelector('#calorific-result');
     const method = mode === 'convert' ? (values.direction === 'iso-ipcc' ? 'IPCC' : 'ISO') : mode.toUpperCase();
     const signed = difference > 0 ? '+' + n(difference, 6) : n(difference, 6);
     result.innerHTML = `<span>Qnet · ${method}</span><strong>${n(net, 6)} <small>MJ/kg = TJ/Gg (cùng trị số)</small></strong>
       ${mode === 'convert' ? `<span>Chênh lệch so với Qnet nguồn ${signed} MJ/kg</span>` : ''}`;
     result.hidden = false;
     return false;
-  });
+  }, true);
   const form = document.querySelector('#modal-form');
   const fields = form.querySelector('#calorific-fields');
   const result = form.querySelector('#calorific-result');
   const method = form.elements.calorificMode;
   form.querySelector('[type="submit"]').textContent = 'Tính Qnet';
   form.querySelector('.modal-foot [data-action="close"]').textContent = 'Đóng';
-  fields.innerHTML = calorificFields(mode, drafts[mode]);
+  const renderFields = () => {
+    fields.onchange = null;
+    fields.innerHTML = calorificFields(mode, drafts[mode]);
+    if (mode === 'lab') bindCalorificLab(form);
+  };
+  renderFields();
   form.addEventListener('input', () => {
     result.hidden = true;
     form.querySelector('#form-error').textContent = '';
   });
   method.addEventListener('change', () => {
-    drafts[mode] = Object.fromEntries(new FormData(form));
+    drafts[mode] = Object.fromEntries([...fields.querySelectorAll('input, select')].map(element => [element.name, element.value]));
     mode = method.value;
-    fields.innerHTML = calorificFields(mode, drafts[mode]);
+    renderFields();
     result.hidden = true;
     form.querySelector('#form-error').textContent = '';
   });
