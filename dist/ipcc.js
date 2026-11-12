@@ -45,7 +45,7 @@ function ncvTableConfig(data) {
       const matches = db.fuels.filter(fuel => fuel.id === templateId || ids.includes(fuel.id));
       const library = matches.map(fuel => `<div>${esc(fuel.id)} · ${fuel.ncv.map(number).join(' / ')}</div>`).join('');
       return [`<strong>${esc(name)}</strong>${alias ? `<span class="annual-number">${esc(alias)}</span>` : ''}`,
-        number(value), number(low), number(high), library || '—', pdfButton(file, page)];
+        number(value), number(low), number(high), library || '—', ipccFuelActions(name, pdfButton(file, page))];
     },
   };
 }
@@ -136,6 +136,9 @@ document.addEventListener('click', event => {
       break;
     case 'ipcc-page':
       moveReferencePage(button, ipccView, 'ipcc-results', ipccResults);
+      break;
+    case 'ipcc-use-fuel':
+      openIpccFuel(Number(button.dataset.fuelIndex));
       break;
     case 'ipcc-pdf':
       showIpccContent(button.dataset.file, Number(button.dataset.page));

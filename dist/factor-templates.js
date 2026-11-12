@@ -56,6 +56,72 @@ function useFactorTemplate(template) {
   factorDialog(undefined, entry);
 }
 
+function ipccFuelActions(name, sourceButton) {
+  const index = ipccFuelRows.findIndex(row => row[0] === name);
+  return `<div class="ipcc-page-links">${sourceButton}${index < 0 ? '' :
+    btn('Dùng hệ số này', 'ipcc-use-fuel', 'small primary', `data-fuel-index="${index}"`)}</div>`;
+}
+
+function showIpccFuelLibrary(query) {
+  tab = 4;
+  library = 'fuels';
+  workbookView.reference = false;
+  filter = query;
+  render();
+}
+
+function openIpccFuel(index) {
+  if (!Number.isInteger(index) || index < 0) return;
+  const template = energyFuelTemplates[index];
+  if (!template) return;
+  const existing = reusableTemplate('fuels', template);
+  const openDraft = () => {
+    const draft = structuredClone(template);
+    let suffix = 2;
+    while (db.fuels.some(fuel => fuel.id === draft.id)) draft.id = `${template.id}_${suffix++}`;
+    draft.source = draft.source.split('. Số liệu hoạt động nhập theo kg.')[0] + '.';
+    showIpccFuelLibrary('');
+    factorDialog(undefined, draft, { ipcc: true, missingNcv: draft.ncv.some(value => value == null) });
+  };
+  if (!existing) { openDraft(); return; }
+  modal('Dùng hệ số IPCC', `<p><strong>${esc(template.name)}</strong></p>
+    <p class="sub">Mẫu này đã có trong Đang áp dụng với mã <strong>${esc(existing.id)}</strong>. Bạn có thể dùng mã đó khi khai báo nguồn đốt cố định hoặc tạo bản riêng từ số liệu IPCC để giữ nguyên hệ số hiện tại.</p>
+    <p>${btn('Xem hệ số đang áp dụng', 'ipcc-view-existing', '', 'id="ipcc-view-existing"')}</p>`, () => false);
+  const dialog = document.querySelector('#modal');
+  dialog.querySelector('button[type="submit"]').textContent = 'Tạo bản riêng từ IPCC';
+  // Close before opening the next form in the same dialog.
+  dialog.querySelector('form').onsubmit = event => {
+    event.preventDefault();
+    dialog.close();
+    openDraft();
+  };
+  dialog.querySelector('#ipcc-view-existing').onclick = () => {
+    dialog.close();
+    showIpccFuelLibrary(existing.id);
+  };
+}
+
+function ipccFuelDraftNote(missingNcv) {
+  return `<div class="note">Mẫu IPCC 2006 Bảng 2.2 dùng cho đốt cố định ngành năng lượng. Mẫu mặc định nhập lượng nhiên liệu theo kg; nếu đổi đơn vị, kiểm tra lại số kg trên mỗi đơn vị hoạt động.</div>${missingNcv ?
+    '<div class="note warning">Bảng 1.2 ghi NA. Điền NCV thuần và hai cận theo tài liệu hoặc phép đo phù hợp trước khi lưu.</div><label class="field">Nguồn NCV bổ sung<input name="ncvSource" required placeholder="Ví dụ: phiếu phân tích, số hiệu và ngày đo"></label>' : ''}`;
+}
+
+function validateIpccFuelDraft(fuel, data, missingNcv) {
+  if (fuel.type !== 'stationary') throw Error('Mẫu Bảng 2.2 chỉ dùng cho đốt cố định. Với đốt di động, chọn mẫu tương ứng trong Thư viện hệ số.');
+  if (!fuel.unit.trim() || !fuel.source.trim()) throw Error('Cần ghi đơn vị hoạt động và nguồn tài liệu.');
+  if (!(fuel.ncv[0] > 0)) throw Error('NCV phải lớn hơn 0.');
+  for (const [key, label] of [['ncv', 'NCV'], ['co2', 'EF CO₂'], ['ch4', 'EF CH₄'], ['n2o', 'EF N₂O']]) {
+    const [value, low, high] = fuel[key];
+    if (![value, low, high].every(Number.isFinite) || low > value || value > high)
+      throw Error(label + ': cận dưới phải ≤ giá trị và giá trị phải ≤ cận trên.');
+  }
+  if (missingNcv) {
+    const source = data.get('ncvSource')?.trim();
+    if (!source) throw Error('Cần ghi nguồn NCV bổ sung.');
+    fuel.source = fuel.source.trim() + ' Nguồn NCV bổ sung: ' + source;
+  }
+}
+
 function workbookFactorSource(section, index, source) {
   return `${source} · Excel ${section.sheet}, dòng ${section.start + index}`;
 }
