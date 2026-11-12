@@ -1,5 +1,64 @@
 'use strict';
 
+const activityUncertaintyPresets = [
+  ['custom', 'Tùy chỉnh'],
+  ['u-shape', 'U-shape theo tài liệu (u = a / 2)'],
+  ['pump', 'Trụ bơm: 0,5% / √3'],
+  ['scale5', 'Cân 5 tấn: e = 5 kg'],
+  ['scale50', 'Cân 50 tấn: e = 15 kg'],
+  ['electric', 'Công tơ điện: u = 0,1%'],
+];
+
+function activityUncertaintyFields(row) {
+  const useHalfWidth = row.adHalfWidth !== undefined;
+  return selectField('Cách xác định u số liệu hoạt động', 'preset', activityUncertaintyPresets, useHalfWidth ? 'u-shape' : 'custom')
+    + field('u số liệu hoạt động chuẩn (%)', 'ad', row.ad, 'number', 'min="0" step="any" required')
+    + `<div class="span2" ${useHalfWidth ? '' : 'hidden'}>
+      ${field('Giới hạn sai số ±a (%)', 'adHalfWidth', row.adHalfWidth ?? '', 'number', 'min="0" step="any"')}
+      <small class="source-text">Nhập độ lớn của một phía. Ví dụ, giới hạn ±0,5% thì nhập 0.5 để được u = 0,25%.</small>
+    </div>`;
+}
+
+function bindActivityUncertainty(form) {
+  const { preset, ad, adHalfWidth } = form.elements;
+  const group = adHalfWidth.parentElement.parentElement;
+  const suggestions = {
+    pump: .5 / Math.sqrt(3),
+    scale5: 5 / Math.sqrt(3) / 5000 * 100,
+    scale50: 15 / Math.sqrt(3) / 50000 * 100,
+    electric: .1,
+  };
+  let previousValue = ad.value;
+  const update = () => { ad.value = adHalfWidth.value === '' ? '' : adHalfWidth.valueAsNumber / 2; };
+  const applyPreset = () => {
+    const useHalfWidth = preset.value === 'u-shape';
+    group.hidden = !useHalfWidth;
+    adHalfWidth.disabled = !useHalfWidth;
+    adHalfWidth.required = useHalfWidth;
+    ad.readOnly = useHalfWidth;
+    if (useHalfWidth) {
+      if (ad.value !== '') previousValue = ad.value;
+      update();
+    } else if (Object.hasOwn(suggestions, preset.value)) {
+      ad.value = suggestions[preset.value];
+    } else if (ad.value === '') {
+      ad.value = previousValue;
+    }
+  };
+  preset.addEventListener('change', applyPreset);
+  adHalfWidth.addEventListener('input', update);
+  applyPreset();
+}
+
+function readActivityUncertainty(data, row) {
+  delete row.adHalfWidth;
+  if (data.get('preset') === 'u-shape') {
+    const halfWidth = data.get('adHalfWidth');
+    row.adHalfWidth = halfWidth === '' ? '' : Number(halfWidth);
+    row.ad = halfWidth === '' ? '' : row.adHalfWidth / 2;
+  }
+}
+
 const activityView = { periodId: null, query: '', size: 20, page: 1 };
 const overviewView = { periodId: null, query: '', size: 10, page: 1 };
 
