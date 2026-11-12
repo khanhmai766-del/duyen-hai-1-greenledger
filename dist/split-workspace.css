@@ -1,0 +1,41 @@
+.split-workspace { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 14px; }
+.split-pane { min-width: 0; border: 1px solid var(--line); background: #fff; border-radius: 10px; overflow: hidden; }
+.split-pane-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 12px; border-bottom: 1px solid var(--line); background: #f0f6f2; min-height: 71px; }
+.split-pane-tabs { display: flex; flex-wrap: wrap; gap: 5px; }
+.split-calculation-head h2 { font-size: 16px; margin: 0 0 4px; }
+.split-scroll { overflow: auto; height: clamp(420px, calc(100vh - 310px), 900px); padding: 12px; }
+.split-scroll > .panel { padding: 12px; }
+.split-scroll .toolbar { gap: 9px; flex-wrap: wrap; }
+.split-scroll .search { max-width: 100%; }
+.split-calculation { container-type: inline-size; }
+.split-calculation .calculation-workspace { display: block; }
+.split-calculation .calculation-results-heading { flex-wrap: wrap; }
+.split-calculation .calculation-source-grid { grid-template-columns: 1fr; }
+.split-calculation .calculation-filters { position: static; max-height: none; }
+.split-calculation-filters { margin-bottom: 12px; }
+.split-calculation-filters > summary { cursor: pointer; padding: 8px 0; font-weight: 600; }
+.split-calculation .calculation-card-summary { grid-template-columns: 48px minmax(0, 1fr); }
+.split-calculation .calculation-card-total { grid-column: 1 / -1; justify-content: flex-start; }
+.split-calculation .calculation-card-action { grid-column: 1 / -1; align-items: flex-start; }
+.split-calculation .calc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.split-calculation .calc-item strong { overflow-wrap: anywhere; }
+.split-scroll :is(.table-wrap, .activity-table-shell) { max-width: 100%; }
+@container (min-width: 540px) {
+  .split-calculation .calculation-source-list:not(.calculation-source-grid) .calculation-card-summary {
+    grid-template-columns: 48px minmax(0, 1fr) max-content 112px;
+    gap: 10px;
+  }
+  .split-calculation .calculation-source-list:not(.calculation-source-grid) .calculation-card-total {
+    grid-column: auto;
+    justify-content: flex-end;
+  }
+  .split-calculation .calculation-source-list:not(.calculation-source-grid) .calculation-card-action {
+    grid-column: auto;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+}
+@media (max-width: 900px) {
+  .split-workspace { grid-template-columns: 1fr; }
+  .split-scroll { height: 450px; }
+}

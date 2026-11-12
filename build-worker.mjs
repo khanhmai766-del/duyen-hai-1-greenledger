@@ -1,19 +1,20 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { extname } from 'node:path';
 
 const assets = {};
-const files = [
-  ['/', 'index.html', 'text/html; charset=utf-8'],
-  ['/login', 'login.html', 'text/html; charset=utf-8'],
-  ['/style.css', 'style.css', 'text/css; charset=utf-8'],
-  ['/login.css', 'login.css', 'text/css; charset=utf-8'],
-  ['/engine.js', 'engine.js', 'text/javascript; charset=utf-8'],
-  ['/app.js', 'app.js', 'text/javascript; charset=utf-8'],
-  ['/calorific.js', 'calorific.js', 'text/javascript; charset=utf-8'],
-  ['/calorific.css', 'calorific.css', 'text/css; charset=utf-8'],
-  ['/duyen-hai.png', 'duyen-hai.png', 'image/png'],
-];
-
-for (const [path, filename, type] of files) {
+const types = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
+  '.png': 'image/png',
+};
+const htmlRoutes = { 'index.html': '/', 'login.html': '/login' };
+for (const filename of (await readdir('dist')).sort()) {
+  const type = types[extname(filename)];
+  if (!type) continue;
+  const path = htmlRoutes[filename] || '/' + filename;
   const base64 = type.startsWith('image/');
   const body = await readFile(`dist/${filename}`, base64 ? 'base64' : 'utf8');
   assets[path] = { type, body, base64 };

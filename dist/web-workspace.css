@@ -1,0 +1,54 @@
+.web-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 4px 12px;
+  border-bottom: 2px solid #cda55f;
+  background: linear-gradient(100deg, #132438, #254764);
+  color: #f2f6fb;
+  font-size: 12px;
+}
+.web-toolbar > details { position: relative; }
+.web-toolbar summary, .web-toolbar > button {
+  display: block;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+}
+.web-toolbar summary::-webkit-details-marker { display: none; }
+.web-toolbar > button:hover, .web-toolbar summary:hover, .web-toolbar details[open] > summary { background: #ffffff20; }
+.web-toolbar-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 4;
+  min-width: max-content;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  color: var(--ink);
+  box-shadow: 0 7px 20px #142d4330;
+}
+.web-toolbar-menu button, .web-toolbar-menu a {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 4px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+.web-toolbar-menu :is(a, button):hover { background: #eff4f7; }
+.ipcc-web-frame { display: block; width: 100%; height: min(74vh, 820px); border: 0; background: var(--paper); }
+@media (max-width: 400px) {
+  .web-toolbar > details:last-child .web-toolbar-menu { left: auto; right: 0; }
+}
