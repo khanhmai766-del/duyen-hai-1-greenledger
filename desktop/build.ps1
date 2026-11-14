@@ -25,7 +25,7 @@ $index = (Read-Web 'index.html').Replace('<script src="app.js"></script>', '<scr
 $index = $index.Replace('<script src="app.js"></script>', '<script src="ipcc.js"></script><script src="ipcc-reader.js"></script><script src="factor-workbook-data.js"></script><script src="ipcc-fuel-data.js"></script><script src="factor-workbook.js"></script><script src="factor-templates.js"></script><script src="split-workspace.js"></script><script src="app.js"></script>').Replace('</head>', '<link rel="stylesheet" href="ipcc.css"><link rel="stylesheet" href="factor-workbook.css"><link rel="stylesheet" href="split-workspace.css"></head>')
 $index = $index.Replace('<script src="app.js"></script>', '<script src="inventory-guide.js"></script><script src="app.js"></script>').Replace('</head>', '<link rel="stylesheet" href="inventory-guide.css"></head>')
 Write-Web 'index.html' $index
-foreach ($file in @('overview-hero.js','overview-hero.css','port-view.mp4','facility-report.js','facility-report.css','calorific.js','calorific-lab.js','calorific.css','inventory-guide.js','inventory-guide.css','Huong-dan-tinh-kiem-ke-khi-nha-kinh-Duyen-Hai-1.docx')) {
+foreach ($file in @('buttons.js','buttons.css','overview-hero.js','overview-hero.css','port-view.mp4','facility-report.js','facility-report.css','calorific.js','calorific-lab.js','calorific.css','inventory-guide.js','inventory-guide.css','Huong-dan-tinh-kiem-ke-khi-nha-kinh-Duyen-Hai-1.docx')) {
     Copy-Item -LiteralPath (Join-Path $repo "dist\$file") -Destination $webFolder -Force
 }
 $login = (Read-Web 'login.html').Replace('action="/login"', 'action="/login.html"')
@@ -74,7 +74,6 @@ $app = $app.Replace('${tab===0?dashboard(s):tab===1?activities(s):tab===2?calcul
 $app = $app.Replace('${pageOptions()}', '${pageOptions()}${splitWorkspaceToggle()}')
 $app = $app.Replace('function render(){let s=', 'function render(){const splitScroll=captureSplitScroll();let s=')
 $app = $app.Replace('footer></main></div></div>`;mountOverviewModel();}', 'footer></main></div></div>`;restoreSplitScroll(splitScroll);mountOverviewModel();}')
-$app = $app.Replace("btn('Xuất CSV','csv')", "btn('Xuất Excel .xlsx','xlsx')+btn('Xuất CSV','csv')").Replace("btn('Tải bảng CSV','csv')", "btn('Tải Excel .xlsx','xlsx','primary')+btn('Tải bảng CSV','csv')")
 $app = $app.Replace("'Tra cứu IPCC'];", "'Tra cứu IPCC','Hướng dẫn kiểm kê'];")
 $app = $app.Replace("'Tìm và xem bảng tham chiếu IPCC ngay trong ứng dụng.'][tab]", "'Tìm và xem bảng tham chiếu IPCC ngay trong ứng dụng.','Công thức, ví dụ tính và các bước lập báo cáo.'][tab]")
 $app = $app.Replace('${tab===6?'''':btn(''Xuất báo cáo'',''go-report'',''primary'')}', '${tab===7?guideDownloadButton():tab===6?'''':btn(''Xuất báo cáo'',''go-report'',''primary'')}')
