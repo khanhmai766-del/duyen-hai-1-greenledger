@@ -107,7 +107,8 @@ body { margin: 0; min-height: 100vh; min-height: 100svh; }
 .login-brand-foot { margin: 0; color: #b9cbc1; font-size: 13px; }
 
 /* Cột biểu mẫu */
-.login-panel { display: grid; place-items: center; padding: clamp(24px, 5vw, 64px); }
+.login-panel { display: grid; grid-template-rows: 1fr auto; place-items: center; padding: clamp(24px, 5vw, 64px) clamp(24px, 5vw, 64px) 28px; }
+.login-copyright { margin: 32px 0 0; color: var(--muted); font-size: 13px; text-align: center; }
 .login-card { width: min(100%, 400px); animation: login-rise .5s cubic-bezier(.22, 1, .36, 1) both; }
 .login-kicker { margin: 0 0 6px; color: var(--green); font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .login-card h1 { margin: 0; font: 700 clamp(30px, 3.2vw, 38px)/1.1 var(--display); letter-spacing: -0.04em; }
