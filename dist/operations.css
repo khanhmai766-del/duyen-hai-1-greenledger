@@ -1,0 +1,74 @@
+.brand .brand-mark {
+  width: 43px;
+  height: 43px;
+  flex: 0 0 43px;
+  object-fit: contain;
+}
+
+.brand .brand-name { min-width: 0; }
+.brand-name strong { display: block; font-weight: 750; line-height: 1.05; }
+.brand-facility { display: block; color: #c8d9d0; font-size: 9px; letter-spacing: .65px; line-height: 1.4; margin-top: 5px; }
+.page-head h1 { text-transform: uppercase; letter-spacing: -.45px; }
+.page-head > .actions { justify-content: flex-end; flex-shrink: 0; }
+.page-head .method-button { border-color: #b8cfc5; }
+.page-head:has(.page-options) { flex-wrap: wrap; }
+.page-head > .actions:has(.page-options) {
+  align-items: center;
+  max-width: 100%;
+  margin-left: auto;
+}
+.page-options { margin: 0; align-items: center; }
+
+.method-dialog-content { margin-top: 18px; }
+.method-standard { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
+.method-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 19px; }
+.method-metrics div { background: #eef4ef; border-radius: 7px; padding: 12px; }
+.method-metrics dt { color: #567269; font-size: 11px; line-height: 1.5; }
+.method-metrics dd { color: var(--green); margin: 7px 0 0; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.method-dialog-content p { font-size: 13px; }
+.method-setting { padding: 13px 12px; border: 1px solid var(--line); background: var(--paper); border-radius: 7px; line-height: 1.6; margin-top: 18px; }
+.method-setting input { accent-color: var(--green); flex-shrink: 0; }
+
+.activity-table-shell { border: 1px solid #dce4eb; border-radius: 9px; overflow: hidden; scroll-margin-top: 16px; }
+.activity-table-toolbar, .activity-table-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; background: #f5f8fb; color: #415c70; font-size: 12px; }
+.activity-table-toolbar label { display: flex; align-items: center; gap: 8px; }
+.activity-table-toolbar select, .activity-table-toolbar input { border-color: #cfdae4; }
+.activity-page-size select { padding: 6px 9px; }
+.activity-search input { width: clamp(180px, 24vw, 300px); padding: 8px 10px; }
+.activity-table { min-width: 690px; }
+.activity-table th { background: #075681; color: #fff; border-bottom: 0; border-right: 1px solid #ffffff2e; font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .25px; }
+.activity-table th:last-child { border-right: 0; }
+.activity-table td { border-color: #e0e7ec; padding-top: 16px; padding-bottom: 16px; }
+.activity-table tbody tr:nth-child(even) { background: #f9fbfd; }
+.activity-table tbody tr:hover { background: #eff6fb; }
+.activity-table .activity-index { width: 58px; text-align: center; font-variant-numeric: tabular-nums; }
+.activity-table td.activity-index { color: #617b90; }
+.activity-table .activity-actions-heading { text-align: center; }
+.activity-row-actions { display: flex; gap: 6px; justify-content: center; }
+.activity-table-footer { border-top: 1px solid #dce4eb; }
+.activity-pagination { display: flex; gap: 5px; align-items: center; }
+.activity-page-button, .activity-page-number { min-width: 34px; height: 32px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; }
+.activity-page-button { color: #075681; border-color: #dce4eb; font-size: 16px; }
+.activity-page-button:disabled { opacity: .42; cursor: default; }
+.activity-page-number { background: #e6eff7; color: #123e5c; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.activity-empty { text-align: center; padding: 30px 12px !important; color: #617b90; }
+
+@media (max-width: 1040px) {
+  .page-head { flex-wrap: wrap; }
+  .page-head > .actions { justify-content: flex-start; }
+  .page-head > .actions:has(.page-options) { margin-left: 0; }
+  .activity-table-toolbar { flex-wrap: wrap; }
+}
+
+@media (max-width: 560px) {
+  .method-metrics { grid-template-columns: 1fr; }
+  .activity-table-footer { flex-wrap: wrap; }
+  .activity-search { flex-wrap: wrap; }
+  .activity-search input { width: min(70vw, 260px); }
+}
+html {
+  color-scheme: light;
+  scrollbar-color: #93a8a0 transparent;
+  scrollbar-width: thin;
+}
+

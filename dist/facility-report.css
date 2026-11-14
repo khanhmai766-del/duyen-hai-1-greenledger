@@ -1,0 +1,34 @@
+.source-review, .report-profile {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-width: 0;
+}
+.source-review summary, .report-profile legend { cursor: pointer; font-weight: 650; }
+.source-review .form-grid { margin-top: 14px; }
+.report-profile { margin-bottom: 16px; }
+.facility-report { overflow-x: auto; }
+.facility-cover { text-align: center; padding: 28px 0 32px; border-bottom: 1px solid var(--line); }
+.facility-cover h1 { margin: 32px auto 6px; font-size: clamp(22px, 3vw, 36px); }
+.facility-cover p { margin: 8px 0; }
+.facility-letterhead, .facility-signatures { display: flex; justify-content: space-between; gap: 18px; }
+.facility-letterhead > *, .facility-signatures > * { flex: 1; }
+.facility-date { font-style: italic; }
+.facility-section { margin: 24px 0; }
+.facility-section h2 { border-bottom: 1px solid var(--line); padding-bottom: 7px; }
+.facility-section h3 { font-size: 15px; margin: 18px 0 8px; }
+.facility-section p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }
+.facility-table { width: 100%; margin: 12px 0 18px; border-collapse: collapse; }
+.facility-table caption { text-align: left; padding: 6px 0; font-weight: 650; }
+.facility-table :is(th,td) { padding: 8px; overflow-wrap: anywhere; }
+.facility-signatures { text-align: center; justify-content: flex-end; padding: 18px 0 40px; }
+@media print {
+  @page facility { size: A4 landscape; margin: 13mm; }
+  #report-sheet.facility-report { page: facility; overflow: visible; break-inside: auto; padding: 0; }
+  .facility-cover { min-height: 158mm; border: 0; break-after: page; display: flex; flex-direction: column; }
+  .facility-cover h1 { margin-top: 40mm; }
+  .facility-cover .facility-date { margin-top: auto; }
+  .facility-table thead { display: table-header-group; }
+  .facility-table :is(tr, caption), .facility-signatures { break-inside: avoid; }
+  .facility-section :is(h2,h3), .facility-table caption { break-after: avoid; }
+}

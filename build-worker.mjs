@@ -8,6 +8,11 @@ const files = [
   ['/login.css', 'login.css', 'text/css; charset=utf-8'],
   ['/engine.js', 'engine.js', 'text/javascript; charset=utf-8'],
   ['/app.js', 'app.js', 'text/javascript; charset=utf-8'],
+  ['/calculations.js', 'calculations.js', 'text/javascript; charset=utf-8'],
+  ['/calculations.css', 'calculations.css', 'text/css; charset=utf-8'],
+  ['/activities.js', 'activities.js', 'text/javascript; charset=utf-8'],
+  ['/operations.css', 'operations.css', 'text/css; charset=utf-8'],
+  ['/greenledger-brand.png', 'greenledger-brand.png', 'image/png'],
   ['/duyen-hai.png', 'duyen-hai.png', 'image/png'],
 ];
 
