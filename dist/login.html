@@ -16,7 +16,7 @@
       </p>
       <div class="login-brand-copy">
         <p class="login-eyebrow">Nhà máy Nhiệt điện Duyên Hải 1</p>
-        <h2>Kiểm kê <em>khí nhà kính</em><br>rõ đến từng nguồn</h2>
+        <h2>Kiểm kê <em>khí nhà kính</em><br>rõ đến từng <span class="rb-rotate" data-rotate-words='["nguồn","hệ số","bước tính"]'>nguồn</span></h2>
         <ul class="login-facts">
           <li><strong>IPCC 2006</strong><span>Phương pháp</span></li>
           <li><strong>Phạm vi 1 · 2</strong><span>Trực tiếp và điện năng</span></li>
@@ -92,6 +92,50 @@
       });
       const username = form.elements.username;
       (username.value ? password : username).focus();
+    })();
+
+    // RotatingText (chuyển từ React Bits, giống tiêu đề Tổng quan): đổi chữ lần lượt, từng ký tự trượt vào.
+    // Trình đọc màn hình chỉ đọc từ đầu tiên; dừng khi trang ẩn hoặc bật giảm chuyển động.
+    (() => {
+      const element = document.querySelector('[data-rotate-words]');
+      if (!element || !element.animate) return;
+      let words;
+      try { words = JSON.parse(element.dataset.rotateWords); } catch { return; }
+      const segmenter = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('vi', { granularity: 'grapheme' }) : null;
+      const split = text => (segmenter ? Array.from(segmenter.segment(text), part => part.segment) : Array.from(text));
+      const spoken = document.createElement('span');
+      spoken.className = 'rb-sr-only';
+      spoken.textContent = words[0];
+      const holder = document.createElement('span');
+      holder.className = 'rb-rotate-word';
+      holder.setAttribute('aria-hidden', 'true');
+      const show = word => holder.replaceChildren(...split(word).map(char => {
+        const span = document.createElement('span');
+        span.className = 'rb-rotate-char';
+        span.textContent = char;
+        return span;
+      }));
+      element.replaceChildren(spoken, holder);
+      show(words[0]);
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches || words.length < 2) return;
+      const ease = 'cubic-bezier(.22, 1, .36, 1)';
+      let index = 0;
+      const step = async () => {
+        if (document.hidden) { setTimeout(step, 2600); return; }
+        await Promise.all([...holder.children].map((char, i) => char.animate(
+          [{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(-110%)', opacity: 0 }],
+          { duration: 260, delay: i * 18, easing: 'cubic-bezier(.5, 0, .75, 0)', fill: 'forwards' }).finished.catch(() => {})));
+        const from = holder.getBoundingClientRect().width;
+        index = (index + 1) % words.length;
+        show(words[index]);
+        const to = holder.getBoundingClientRect().width;
+        holder.animate([{ width: from + 'px' }, { width: to + 'px' }], { duration: 320, easing: ease });
+        [...holder.children].forEach((char, i) => char.animate(
+          [{ transform: 'translateY(100%)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }],
+          { duration: 520, delay: i * 25, easing: ease, fill: 'backwards' }));
+        setTimeout(step, 2600);
+      };
+      setTimeout(step, 2600);
     })();
   </script>
 </body>
