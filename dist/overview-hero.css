@@ -177,12 +177,16 @@
     align-self: end;
     display: grid;
     grid-template-columns: repeat(4, minmax(96px, 128px));
+    grid-auto-rows: 1fr;
     gap: 12px;
     margin: 0;
     padding: 0;
     list-style: none;
   }
+  /* Bốn thẻ cao bằng nhau: ô lưới giãn theo hàng, thẻ giãn đầy ô; chữ căn từ trên để tiêu đề thẳng hàng. */
+  .ov-steps > li { display: flex; flex-direction: column; }
   .ov-step {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -199,7 +203,7 @@
     transition: background-color .2s ease-out, border-color .2s ease-out;
   }
   .ov-step:hover { background: #ffffff26; border-color: #ffffff8c; }
-  .ov-step-icon { margin-bottom: auto; color: var(--ov-accent); }
+  .ov-step-icon { color: var(--ov-accent); }
   .ov-step-icon svg { width: 20px; height: 20px; }
   .ov-step-title { margin-top: 14px; font-size: 13.5px; font-weight: 700; line-height: 1.25; }
   .ov-step-detail { color: var(--ov-soft); font-size: 11.5px; font-weight: 400; line-height: 1.3; }

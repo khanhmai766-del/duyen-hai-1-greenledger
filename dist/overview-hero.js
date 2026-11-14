@@ -251,7 +251,7 @@ function overviewHero(period) {
         <span class="ov-proof-marks" aria-hidden="true">${(scopes.length ? scopes : ['GL']).map(mark => `<span>${mark}</span>`).join('')}</span>
         <span>${period.rows.length} nguồn phát thải · kỳ ${esc(period.year)} · ${esc(period.gwp.toUpperCase())} GWP-100</span>
       </p>
-      <h1 id="ov-hero-title">Kiểm kê <em>khí nhà kính</em><br>rõ đến từng nguồn</h1>
+      <h1 id="ov-hero-title">Kiểm kê <em>khí nhà kính</em><br>rõ đến từng <span class="rb-rotate" data-rotate-words='["nguồn","hệ số","bước tính"]'>nguồn</span></h1>
       <p class="ov-lede">${esc(period.facility)}. Từ hóa đơn, đồng hồ đo và sổ vận hành đến tổng phát thải, độ không đảm bảo đo và báo cáo theo IPCC 2006.</p>
       <div class="ov-cta">
         <button type="button" class="ov-cta-main" data-action="go-report">
