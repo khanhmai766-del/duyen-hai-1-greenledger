@@ -25,7 +25,7 @@ $index = (Read-Web 'index.html').Replace('<script src="app.js"></script>', '<scr
 $index = $index.Replace('<script src="app.js"></script>', '<script src="ipcc.js"></script><script src="ipcc-reader.js"></script><script src="factor-workbook-data.js"></script><script src="ipcc-fuel-data.js"></script><script src="factor-workbook.js"></script><script src="factor-templates.js"></script><script src="split-workspace.js"></script><script src="app.js"></script>').Replace('</head>', '<link rel="stylesheet" href="ipcc.css"><link rel="stylesheet" href="factor-workbook.css"><link rel="stylesheet" href="split-workspace.css"></head>')
 $index = $index.Replace('<script src="app.js"></script>', '<script src="inventory-guide.js"></script><script src="app.js"></script>').Replace('</head>', '<link rel="stylesheet" href="inventory-guide.css"></head>')
 Write-Web 'index.html' $index
-foreach ($file in @('buttons.js','buttons.css','overview-hero.js','overview-hero.css','port-view.mp4','facility-report.js','facility-report.css','calorific.js','calorific-lab.js','calorific.css','inventory-guide.js','inventory-guide.css','Huong-dan-tinh-kiem-ke-khi-nha-kinh-Duyen-Hai-1.docx')) {
+foreach ($file in @('accounts.js','accounts.css','buttons.js','buttons.css','overview-hero.js','overview-hero.css','port-view.mp4','facility-report.js','facility-report.css','calorific.js','calorific-lab.js','calorific.css','inventory-guide.js','inventory-guide.css','Huong-dan-tinh-kiem-ke-khi-nha-kinh-Duyen-Hai-1.docx')) {
     Copy-Item -LiteralPath (Join-Path $repo "dist\$file") -Destination $webFolder -Force
 }
 $login = (Read-Web 'login.html').Replace('action="/login"', 'action="/login.html"')
@@ -79,6 +79,12 @@ $app = $app.Replace("'Tìm và xem bảng tham chiếu IPCC ngay trong ứng d�
 $app = $app.Replace('${tab===6?'''':btn(''Xuất báo cáo'',''go-report'',''primary'')}', '${tab===7?guideDownloadButton():tab===6?'''':btn(''Xuất báo cáo'',''go-report'',''primary'')}')
 $app = $app.Replace("tab===6&&!splitWorkspaceVisible()?", "(tab===7||tab===6&&!splitWorkspaceVisible())?")
 $app = $app.Replace('tab===6?ipccPage():backup(s)', 'tab===6?ipccPage():tab===7?inventoryGuide():backup(s)')
+# Tab 8: Tài khoản & phân quyền (accounts.js).
+$app = $app.Replace("'Tra cứu IPCC','Hướng dẫn kiểm kê'];", "'Tra cứu IPCC','Hướng dẫn kiểm kê','Tài khoản & phân quyền'];")
+$app = $app.Replace("'Công thức, ví dụ tính và các bước lập báo cáo.'][tab]", "'Công thức, ví dụ tính và các bước lập báo cáo.','Đổi mật khẩu, cấp tài khoản và phân quyền theo nhiệm vụ.'][tab]")
+$app = $app.Replace('${tab===7?guideDownloadButton():tab===6?''''', '${tab===7?guideDownloadButton():tab===6||tab===8?''''')
+$app = $app.Replace('(tab===7||tab===6&&!splitWorkspaceVisible())?', '(tab===7||tab===8||tab===6&&!splitWorkspaceVisible())?')
+$app = $app.Replace('tab===7?inventoryGuide():backup(s)', 'tab===7?inventoryGuide():tab===8?accountsPage():backup(s)')
 if ($app.Contains('/login.html') -or $app.Contains('localStorage.')) { throw 'Desktop adaptation failed' }
 $app = $app.TrimEnd() + "`n" + 'if (revision !== null && !storageError && db.ipccFuelLibraryVersion !== 1) change(mergeIpccFuels, ''Đã cập nhật thư viện nhiên liệu IPCC'');'
 Write-Web 'app.js' $app
@@ -93,7 +99,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'vendor\ExcelJS-LICENSE.txt') -D
 $exe = Join-Path $appFolder 'GreenLedger.exe'
 $icon = Join-Path $PSScriptRoot 'greenledger.ico'
 $manifest = Join-Path $PSScriptRoot 'windows.manifest'
-& $compiler /nologo /codepage:65001 /target:winexe /platform:x64 /optimize+ "/win32icon:$icon" "/win32manifest:$manifest" "/out:$exe" "/reference:$core" "/reference:$forms" /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll (Join-Path $PSScriptRoot 'GreenLedger.cs')
+& $compiler /nologo /codepage:65001 /target:winexe /platform:x64 /optimize+ "/win32icon:$icon" "/win32manifest:$manifest" "/out:$exe" "/reference:$core" "/reference:$forms" /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll /reference:System.Web.Extensions.dll (Join-Path $PSScriptRoot 'GreenLedger.cs') (Join-Path $PSScriptRoot 'Accounts.cs')
 if ($LASTEXITCODE -ne 0) { throw 'GreenLedger compilation failed' }
 
 $payload = Join-Path $BuildDirectory 'app.zip'

@@ -44,7 +44,12 @@ internal static class Program
 public sealed class InventoryStorage
 {
     private readonly string path;
-    internal InventoryStorage(string folder) { path = Path.Combine(folder, "du-lieu.json"); }
+    private readonly Func<bool> canWrite;
+    internal InventoryStorage(string folder, Func<bool> canWrite)
+    {
+        path = Path.Combine(folder, "du-lieu.json");
+        this.canWrite = canWrite;
+    }
 
     public string Read()
     {
@@ -54,6 +59,8 @@ public sealed class InventoryStorage
 
     public void Save(string expected, string json)
     {
+        // Kiểm tra lại quyền ở host: tài khoản chỉ xem không ghi được hồ sơ dù giao diện bị sửa.
+        if (!canWrite()) throw new InvalidOperationException("Tài khoản của bạn không có quyền lưu dữ liệu.");
         string current = Read();
         if (!String.Equals(current ?? "", expected, StringComparison.Ordinal))
             throw new InvalidOperationException("Tệp dữ liệu đã thay đổi. Hãy mở lại ứng dụng trước khi lưu.");
@@ -117,15 +124,17 @@ internal sealed class MainWindow : Form
     private const string AppHost = "greenledger.local";
     private const string LoginPage = "/login.html";
     private const string InventoryPage = "/index.html";
-    private const string DefaultAccount = "pxvh1";
     private readonly string dataFolder;
+    private readonly AccountStore accounts;
     private readonly WebView2 view = new WebView2();
     private readonly ToolStripItem[] sessionItems;
     private bool signedIn;
+    private string currentUser;
 
     internal MainWindow(string dataFolder)
     {
         this.dataFolder = dataFolder;
+        accounts = new AccountStore(dataFolder);
         Text = "GreenLedger · Duyên Hải 1";
         Icon = Icon.ExtractAssociatedIcon(typeof(MainWindow).Assembly.Location);
         StartPosition = FormStartPosition.CenterScreen;
@@ -247,8 +256,18 @@ internal sealed class MainWindow : Form
     {
         var core = view.CoreWebView2;
         if (core == null || authenticated == signedIn) return;
-        if (authenticated) core.AddHostObjectToScript("inventoryStorage", new InventoryStorage(dataFolder));
-        else core.RemoveHostObjectFromScript("inventoryStorage");
+        if (authenticated)
+        {
+            core.AddHostObjectToScript("inventoryStorage", new InventoryStorage(dataFolder, CanWrite));
+            core.AddHostObjectToScript("accountBridge", new AccountBridge(accounts, () => currentUser,
+                () => BeginInvoke(new Action(() => SetSession(false)))));
+        }
+        else
+        {
+            core.RemoveHostObjectFromScript("inventoryStorage");
+            core.RemoveHostObjectFromScript("accountBridge");
+            currentUser = null;
+        }
         signedIn = authenticated;
         foreach (var item in sessionItems) item.Enabled = authenticated;
         core.Navigate("https://" + AppHost + (authenticated ? InventoryPage : LoginPage));
@@ -265,9 +284,22 @@ internal sealed class MainWindow : Form
         if (String.IsNullOrEmpty(message) || message.Length > 200) return;
         string[] fields = message.Split(new[] { '|' }, 3);
         if (fields.Length != 3 || fields[0] != "login") return;
-        if (fields[1].Trim() == DefaultAccount && fields[2] == DefaultAccount)
+        try
+        {
+            currentUser = accounts.Login(fields[1], fields[2]).Username;
             SetSession(true);
-        else view.CoreWebView2.PostWebMessageAsString("login-invalid");
+        }
+        catch (AccountError error) { view.CoreWebView2.PostWebMessageAsString("login-invalid|" + error.Message); }
+        catch (IOException) { view.CoreWebView2.PostWebMessageAsString("login-invalid|Không đọc được tệp tài khoản users.json."); }
+    }
+
+    // Tài khoản đang đăng nhập còn hiệu lực và có ít nhất một quyền ghi dữ liệu.
+    private bool CanWrite()
+    {
+        var user = currentUser == null ? null : accounts.Get(currentUser);
+        foreach (string permission in AccountStore.WritePermissions)
+            if (AccountStore.Can(user, permission)) return true;
+        return false;
     }
 
     private async void Initialize(object sender, EventArgs args)

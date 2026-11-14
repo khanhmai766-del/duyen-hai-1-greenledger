@@ -15,6 +15,7 @@ const paths = [
   'M7 17H6a4 4 0 1 1 1-7.9 5.5 5.5 0 0 1 10.7 1.4A3.3 3.3 0 1 1 18 17h-1 M12 12v9 M9 18l3 3 3-3',
   'M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0z M15 15l6 6 M7 10h6 M10 7v6',
   'M12 6c-3-2-6-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1z M12 6v14 M6 9h3 M6 12h3 M15 9h3 M15 12h3',
+  'M12 3l7 3v5c0 4.5-3 8.4-7 10-4-1.6-7-5.5-7-10V6z M12 8.5a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4z M8.3 16.3c.8-1.6 2.1-2.4 3.7-2.4s2.9.8 3.7 2.4',
 ];
 const icon=i=>`<svg class="icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[i]}"></path></svg>`;
 const btn=(text,action,cls='',extra='')=>`<button type="button" class="${cls}" data-action="${action}" ${extra}>${text}</button>`;
