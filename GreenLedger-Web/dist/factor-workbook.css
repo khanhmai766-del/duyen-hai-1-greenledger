@@ -1,0 +1,12 @@
+.factor-workbook-toggle, .factor-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.factor-source { max-width: 320px; overflow-wrap: anywhere; }
+.factor-row-actions { flex-wrap: nowrap; }
+.workbook-detail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 205px), 1fr));
+  gap: 0 14px;
+  margin: 12px 0 0;
+}
+.workbook-detail div { min-width: 0; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.workbook-detail dt { color: #516c61; font-size: 12px; }
+.workbook-detail dd { margin: 4px 0 0; overflow-wrap: anywhere; font-weight: 600; }
