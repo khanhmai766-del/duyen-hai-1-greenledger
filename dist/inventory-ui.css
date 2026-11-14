@@ -115,6 +115,15 @@
   .nav button.active { background: #24453b; color: #fff; border-inline-start-color: var(--amber); }
   .nav button:focus-visible { outline-color: #d9ecb5; }
   .sidebar-bottom { color: #bfcec4; border-color: #ffffff25; padding: 14px 8px 2px; }
+  .sidebar-clock { font-size: 12px; line-height: 1.45; }
+  .sidebar-clock time {
+    display: block;
+    margin-top: 4px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
   .topbar { min-height: 62px; height: auto; padding: 8px clamp(18px, 3vw, 40px); }
   .breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
   .breadcrumb strong { font-weight: 650; }
@@ -129,13 +138,48 @@
   .page-head h1 { font: 760 clamp(30px, 3.35vw, 49px)/1.12 var(--display-font); letter-spacing: -.038em; text-transform: none; text-wrap: balance; margin-bottom: 7px; }
   .page-head > .actions { justify-content: flex-start; flex-shrink: 1; }
   .page-head .sub { font-size: 15px; }
-  .period-strip { gap: 10px 16px; padding: 10px 14px; margin-bottom: 20px; border-radius: 8px; }
+  .period-strip {
+    align-items: center;
+    gap: 12px 20px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border: 1px solid #254c40;
+    border-radius: 12px;
+    background: linear-gradient(110deg, var(--sidebar), #204838);
+  }
   .period-strip[hidden] { display: none; }
-  /* Nhãn "Kỳ kiểm kê" và ô chọn kỳ nằm trên cùng một hàng. */
-  .period-field { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
-  .period-strip label { flex-shrink: 0; font-size: 12px; font-weight: 600; margin: 0; white-space: nowrap; }
-  .period-strip select { flex: 1 1 auto; min-width: 0; width: 100%; max-width: min(100%, 520px); min-height: 33px; padding: 4px 18px 4px 0; text-overflow: ellipsis; }
-  .period-actions { align-items: center; }
+  .period-field { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .period-strip label { flex-shrink: 0; margin: 0; color: #d7e7dc; font-size: 12px; font-weight: 650; }
+  .period-strip select {
+    field-sizing: content;
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 42px;
+    border: 1px solid #83a397;
+    border-radius: 8px;
+    padding: 7px 10px;
+    background: transparent;
+    color: #f1f7f1;
+    color-scheme: dark;
+    font-size: 15px;
+    text-overflow: ellipsis;
+  }
+  .period-strip select option { background-color: var(--sidebar); color: #f1f7f1; }
+  .period-strip select:focus-visible,
+  .period-strip .split-button > button:focus-visible { outline-color: var(--lime); }
+  .period-actions { justify-content: flex-end; align-items: center; gap: 10px; }
+  .period-actions > .badge {
+    padding: 5px 9px;
+    border-color: #ffffff40;
+    border-radius: 20px;
+    background: #ffffff14;
+    color: #f1f7f1;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .period-actions .split-button > button { min-height: 42px; }
+  .period-actions .split-button > .split-toggle { min-width: 42px; padding-inline: 9px; }
   .period-add { color: var(--green); border-color: #c7d9ce; }
   .period-menu { position: relative; }
   .period-menu > summary { display: flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 7px; list-style: none; cursor: pointer; font-size: 12px; }
@@ -251,7 +295,8 @@
   .page-head { align-items: flex-start; }
   .web-toolbar-menu { left: 0; right: auto; }
   .web-toolbar > details:last-child .web-toolbar-menu { left: auto; right: 0; }
-  .period-strip { align-items: stretch; }
+  .period-strip { align-items: stretch; padding-inline: 12px; }
+  .period-actions { justify-content: space-between; }
   .inventory-snapshot, .inventory-snapshot:has(.snapshot-photo) { grid-template-columns: 1fr; }
   .snapshot-total { min-height: 134px; }
   .snapshot-photo { height: clamp(106px, 26vw, 174px); }
@@ -270,4 +315,42 @@
 
 @media print {
   .skip-link { display: none; }
+}
+
+@media screen {
+  /* Motion Prompt #086 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#086 */
+  .nav button { position: relative; }
+  .nav button::after {
+    content: '';
+    position: absolute;
+    inset-inline: 12px;
+    bottom: 3px;
+    height: 3px;
+    background: var(--amber);
+    transform: scaleX(0);
+    transform-origin: right;
+    pointer-events: none;
+  }
+  .nav button:focus-visible::after { transform: scaleX(1); transform-origin: left; }
+  @media (hover: hover) {
+    .nav button:hover::after { transform: scaleX(1); transform-origin: left; }
+  }
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  .nav button::after { transition: transform .3s cubic-bezier(.333333, 1, .666667, 1); }
+
+  /* Motion Prompt #049 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#049 */
+  #modal[open] { animation: gl-dialog-open .32s cubic-bezier(.333333, 1, .666667, 1); }
+  #modal[open]::backdrop { animation: gl-backdrop-open .32s cubic-bezier(.333333, 1, .666667, 1); }
+
+  /* Motion Prompt #053 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#053 */
+  :is(.split-menu:not([hidden]), .web-toolbar details[open] > .web-toolbar-menu) {
+    animation: gl-menu-open .25s cubic-bezier(.333333, 1, .666667, 1);
+  }
+  .split-toggle svg { transition: transform .25s cubic-bezier(.333333, 1, .666667, 1); }
+
+  @keyframes gl-dialog-open { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1); } }
+  @keyframes gl-backdrop-open { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes gl-menu-open { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 }

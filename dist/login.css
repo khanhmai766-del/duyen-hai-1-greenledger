@@ -49,7 +49,7 @@ body { margin: 0; min-height: 100vh; min-height: 100svh; }
 
 .login-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(380px, 1fr);
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
   min-height: 100vh;
   min-height: 100svh;
 }
@@ -75,6 +75,32 @@ body { margin: 0; min-height: 100vh; min-height: 100svh; }
   background:
     radial-gradient(70% 60% at 85% 85%, #e3a95a2e, transparent 70%),
     linear-gradient(160deg, #10241ff2 0%, #10241fcc 45%, #163a31b3 100%);
+}
+.login-background-video {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.login-video-toggle {
+  position: absolute;
+  top: clamp(24px, 4.5vw, 64px);
+  right: clamp(16px, 3vw, 44px);
+  padding: 6px 10px;
+  border: 1px solid #ffffff65;
+  border-radius: 6px;
+  background: #10241fd9;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.login-video-toggle:hover { background: #10241f; }
+@media (max-width: 860px) {
+  .login-video-toggle { top: 21px; right: 22px; }
 }
 .login-wordmark { display: flex; align-items: center; gap: 10px; margin: 0; font: 700 22px/1 var(--display); letter-spacing: -0.02em; }
 .login-wordmark svg { width: 26px; height: 26px; color: var(--accent); }
@@ -107,7 +133,7 @@ body { margin: 0; min-height: 100vh; min-height: 100svh; }
 .login-brand-foot { margin: 0; color: #b9cbc1; font-size: 13px; }
 
 /* Cột biểu mẫu */
-.login-panel { display: grid; grid-template-rows: 1fr auto; place-items: center; padding: clamp(24px, 5vw, 64px) clamp(24px, 5vw, 64px) 28px; }
+.login-panel { display: grid; grid-template-rows: 1fr auto; place-items: center; padding: clamp(24px, 5vw, 64px) clamp(20px, 2.25vw, 48px) 28px; }
 .login-copyright { margin: 32px 0 0; color: var(--muted); font-size: 13px; text-align: center; }
 .login-card { width: min(100%, 400px); animation: login-rise .5s cubic-bezier(.22, 1, .36, 1) both; }
 .login-kicker { margin: 0 0 6px; color: var(--green); font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }

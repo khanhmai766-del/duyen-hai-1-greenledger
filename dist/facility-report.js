@@ -147,7 +147,6 @@ function facilityReport(summary) {
   const warnings = [...new Set(summary.rows.flatMap(result => result.warnings || []))];
   const displayDate = profile.date ? String(profile.date).split('-').reverse().join('/') : '';
   return `<article class="panel facility-report" id="report-sheet">
-    <div class="no-print actions">${btn('Thông tin báo cáo', 'facility-profile')}${exportSplitButton()}</div>
     <header class="facility-cover">
       <div class="facility-letterhead"><strong>${content(period.facility)}</strong>
         <div><strong>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong><br>Độc lập - Tự do - Hạnh phúc</div></div>

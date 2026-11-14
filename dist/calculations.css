@@ -1,18 +1,4 @@
 @media screen {
-  .period-strip.calculation-period-strip {
-    border: 2px solid #b89c54;
-    background: #f9f8ef;
-    padding: 8px 12px;
-  }
-
-  .calculation-period-strip .period-field {
-    padding: 6px 12px;
-    border-radius: 6px;
-    background: #fff;
-  }
-
-  .calculation-period-strip .period-field select { max-width: 100%; }
-
   .calculation-workspace {
     display: grid;
     grid-template-columns: clamp(214px, 16vw, 254px) minmax(0, 1fr);

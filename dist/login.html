@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Đăng nhập vào GreenLedger Duyên Hải 1 để kiểm kê khí nhà kính.">
   <title>Đăng nhập · GreenLedger Duyên Hải 1</title>
+  <link rel="icon" type="image/png" href="/greenledger-brand.png">
   <link rel="stylesheet" href="login.css">
 </head>
 <body>
   <main class="login-shell">
     <section class="login-brand" aria-label="GreenLedger Duyên Hải 1">
+      <video class="login-background-video" muted loop playsinline preload="none" aria-hidden="true"></video>
       <p class="login-wordmark">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"></path><path d="M5 19 13 11"></path></svg>
         GreenLedger
@@ -24,6 +26,7 @@
         </ul>
       </div>
       <p class="login-brand-foot">Dữ liệu kiểm kê chỉ dành cho người được cấp tài khoản.</p>
+      <button class="login-video-toggle" type="button" hidden>Tạm dừng video nền</button>
     </section>
 
     <section class="login-panel" aria-labelledby="login-title">
@@ -68,6 +71,36 @@
     </section>
   </main>
   <script>
+    (() => {
+      const video = document.querySelector('.login-background-video');
+      const toggle = document.querySelector('.login-video-toggle');
+      const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+      let pausedByUser = false;
+
+      const update = () => {
+        video.hidden = reducedMotion.matches;
+        toggle.hidden = reducedMotion.matches || !video.src || video.readyState < 2;
+        toggle.textContent = video.paused ? 'Phát video nền' : 'Tạm dừng video nền';
+      };
+      const sync = () => {
+        if (reducedMotion.matches || pausedByUser) {
+          video.pause();
+          update();
+          return;
+        }
+        if (!video.src) video.src = 'login-background.mp4';
+        video.play().then(update, update);
+      };
+
+      for (const event of ['loadeddata', 'play', 'pause']) video.addEventListener(event, update);
+      toggle.addEventListener('click', () => {
+        pausedByUser = !video.paused;
+        sync();
+      });
+      reducedMotion.addEventListener('change', sync);
+      sync();
+    })();
+
     (() => {
       const form = document.querySelector('.login-form');
       const password = form.elements.password;

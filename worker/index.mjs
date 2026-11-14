@@ -13,7 +13,7 @@ const lockSeconds = 5 * 60;
 const defaultAdmin = 'pxvh1';
 const permissionIds = ['periods', 'data', 'factors', 'import', 'export', 'users'];
 const roleIds = ['admin', 'editor', 'entry', 'viewer', 'custom'];
-const publicPaths = /^\/(login\.css|duyen-hai\.png|(bricolage-grotesque|source-sans-3)-[\w-]+\.woff2)$/;
+const publicPaths = /^\/(login\.css|login-background\.mp4|(duyen-hai|greenledger-brand)\.png|(bricolage-grotesque|source-sans-3)-[\w-]+\.woff2)$/;
 
 const usersTable = `CREATE TABLE IF NOT EXISTS users (
   username TEXT PRIMARY KEY,
@@ -97,16 +97,36 @@ function json(data, status = 200, extraHeaders = {}) {
 
 const fail = (status, error) => json({ error }, status);
 
-function asset(path, body = assets[path]?.body, status = 200) {
+function asset(path, body = assets[path]?.body, status = 200, range = null) {
   const item = assets[path];
   if (!Object.hasOwn(assets, path)) return new Response('Không tìm thấy trang.', { status: 404 });
-  if (item.base64 && body !== null) body = Uint8Array.from(atob(body), character => character.charCodeAt(0));
-  return new Response(body, { status, headers: {
+  const headers = {
     'Content-Type': item.type,
     'Cache-Control': 'private, no-store',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'same-origin',
-  } });
+  };
+  if (item.type === 'video/mp4') {
+    const size = item.body.length / 4 * 3 - (item.body.endsWith('==') ? 2 : Number(item.body.endsWith('=')));
+    headers['Accept-Ranges'] = 'bytes';
+    headers['Content-Length'] = String(size);
+    const match = range?.match(/^bytes=(\d+)-(\d*)$/);
+    if (body !== null && match) {
+      const start = Number(match[1]);
+      const end = match[2] ? Math.min(Number(match[2]), size - 1) : size - 1;
+      if (start > end) return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } });
+      const firstGroup = Math.floor(start / 3);
+      const lastGroup = Math.ceil((end + 1) / 3);
+      const decoded = atob(body.slice(firstGroup * 4, lastGroup * 4));
+      const offset = start - firstGroup * 3;
+      const chunk = Uint8Array.from(decoded.slice(offset, offset + end - start + 1), character => character.charCodeAt(0));
+      headers['Content-Range'] = `bytes ${start}-${end}/${size}`;
+      headers['Content-Length'] = String(chunk.length);
+      return new Response(chunk, { status: 206, headers });
+    }
+  }
+  if (item.base64 && body !== null) body = Uint8Array.from(atob(body), character => character.charCodeAt(0));
+  return new Response(body, { status, headers });
 }
 
 function loginPage(message = '', status = 200, username = '') {
@@ -397,7 +417,7 @@ export default {
     const path = url.pathname;
     const method = request.method;
     const read = method === 'GET' || method === 'HEAD';
-    if (read && publicPaths.test(path)) return asset(path, method === 'HEAD' ? null : undefined);
+    if (read && publicPaths.test(path)) return asset(path, method === 'HEAD' ? null : undefined, 200, request.headers.get('range'));
 
     const accounts = Boolean(env.DB && env.GL_SESSION_KEY);
     const configured = accounts || Boolean(env.GL_OPERATOR_PASSWORD && env.GL_SESSION_KEY);

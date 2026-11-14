@@ -83,6 +83,7 @@ function workspaceHeader() {
     tab === 2 ? btn('Phương pháp &amp; giả định', 'calc-method', 'method-button', 'aria-haspopup="dialog"') : '',
     [2, 4].includes(tab) ? btn('Tính nhiệt trị', 'calorific', 'method-button', 'aria-haspopup="dialog"') : '',
     splitWorkspaceToggle(),
+    tab === 3 && report === 3 ? btn('Thông tin báo cáo', 'facility-profile', '', 'aria-haspopup="dialog"') : '',
     tab === 7 ? guideDownloadButton() : tab === 6 || tab === 8 ? '' : tab === 3 ? exportSplitButton('primary report-action') : btn('Xuất báo cáo', 'go-report', 'primary report-action'),
   ].join('');
   return `${tab === 0 ? overviewHero(period) : `<div class="page-head">
@@ -91,18 +92,33 @@ function workspaceHeader() {
     <div class="actions">${actions}</div>
   </div>`}
   ${storageError ? `<div class="error-banner" role="alert">${esc(storageError)} ${btn('Tải dữ liệu gốc', 'raw-backup', 'small')}</div>` : ''}
-  <section class="period-strip${tab === 2 ? ' calculation-period-strip' : ''}" ${(tab === 7 || tab === 8 || tab === 6 && !splitWorkspaceVisible()) ? 'hidden' : ''} aria-label="Quản lý kỳ kiểm kê">
+  <section class="period-strip" ${(tab === 7 || tab === 8 || tab === 6 && !splitWorkspaceVisible()) ? 'hidden' : ''} aria-label="Quản lý kỳ kiểm kê">
     <div class="period-field">
       <label for="period">Kỳ kiểm kê</label>
       <select id="period">${db.periods.map(x => `<option value="${esc(x.id)}" ${x.id === period.id ? 'selected' : ''}>${x.year} · ${esc(x.facility)}</option>`).join('')}</select>
     </div>
     <div class="actions period-actions">
       ${badge(period.gwp.toUpperCase() + ' · GWP-100', 'blue')}
-      ${splitButton({ label: '+ Kỳ mới', action: 'new-period', cls: 'small', menuLabel: 'Quản lý kỳ kiểm kê',
+      ${splitButton({ label: '+ Kỳ mới', action: 'new-period', cls: 'report-action', menuLabel: 'Quản lý kỳ kiểm kê',
         items: [['Nhân bản kỳ', 'clone-period'], ['Thông tin cơ sở', 'facility'], ['Xóa kỳ', 'delete-period', 'danger']] })}
     </div>
   </section>
   ${pageOptions()}`;
+}
+
+const sidebarClockFormat = new Intl.DateTimeFormat('vi-VN', {
+  timeZone: 'Asia/Ho_Chi_Minh',
+  dateStyle: 'short',
+  timeStyle: 'medium',
+  hourCycle: 'h23',
+});
+
+function updateSidebarClock() {
+  const clock = document.querySelector('.sidebar-clock time');
+  if (!clock) return;
+  const now = new Date();
+  clock.dateTime = now.toISOString();
+  clock.textContent = sidebarClockFormat.format(now);
 }
 
 function render() {
@@ -118,7 +134,10 @@ function render() {
       <aside class="sidebar">
         <div class="brand"><img class="brand-mark" src="greenledger-brand.png" alt=""><span class="brand-name"><strong>GreenLedger</strong><span class="brand-facility">Kiểm kê khí nhà kính</span></span></div>
         <nav class="nav" aria-label="Điều hướng chính">${workspaceNavigation()}</nav>
-        <div class="sidebar-bottom"><span class="dot"></span>Lưu dữ liệu trên thiết bị</div>
+        <div class="sidebar-bottom sidebar-clock">
+          <span>Giờ Việt Nam</span>
+          <time></time>
+        </div>
       </aside>
       <div class="main">
         <header class="topbar no-print">
@@ -132,6 +151,7 @@ function render() {
         </main>
       </div>
     </div>`;
+  updateSidebarClock();
   restoreSplitScroll(splitScroll);
   mountOverviewModel();
   document.querySelector('.nav').scrollLeft = navigationScroll;
@@ -233,4 +253,5 @@ document.addEventListener('click',e=>{let b=e.target.closest('[data-action]');if
 document.addEventListener('change',async e=>{if(e.target.id==='period'){current=e.target.value;render()}if(e.target.id==='import'){let file=e.target.files[0];if(!file)return;try{let next=mergeIpccFuels(mergeWorkbookFactors(E.updateDefaultGwp(JSON.parse(await file.text()))));E.validate(next);confirmAction('Nhập dữ liệu sao lưu?',`Tệp hợp lệ: ${next.periods.length} kỳ, ${next.periods.reduce((s,p)=>s+p.rows.length,0)} nguồn phát thải. Thay thế toàn bộ dữ liệu hiện tại?`,()=>{let ok=commit(next,'Đã nhập dữ liệu sao lưu');if(ok){current=db.periods[0].id;render()}return ok});}catch(err){toast('Không thể nhập: '+err.message);e.target.value=''}}});
 window.addEventListener('storage',e=>{if(e.key===KEY){stale=true;storageError='Dữ liệu đã thay đổi ở thẻ khác. Tải lại trang để dùng bản mới nhất; không chỉnh sửa trước khi tải lại.';render()}});
 render();
+setInterval(updateSidebarClock, 1000);
 if (revision !== null && !storageError && db.ipccFuelLibraryVersion !== 1) change(mergeIpccFuels, 'Đã cập nhật thư viện nhiên liệu IPCC');
