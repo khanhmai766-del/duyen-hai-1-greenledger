@@ -1,0 +1,90 @@
+/* Kiểu nút chung và nút tách đôi "Thao tác | ⌄" (dùng chung cho Web và Desktop).
+   Chỉ đổi hình dáng; màu của .primary, .danger, .report-action giữ theo CSS sẵn có. */
+@media screen {
+  button {
+    min-height: 36px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    box-shadow: 0 1px 2px #12392a12;
+    transition: background-color .15s ease-out, border-color .15s ease-out, box-shadow .15s ease-out, color .15s ease-out;
+  }
+  button.small { min-height: 32px; padding: 5px 11px; font-size: 13px; }
+  button.quiet { box-shadow: none; }
+  button:not(:disabled):active { box-shadow: none; }
+
+  .split-button {
+    position: relative;
+    display: inline-flex;
+    align-items: stretch;
+    vertical-align: middle;
+    border-radius: 8px;
+  }
+  .split-button > button { margin: 0; }
+  /* Hàng thao tác có nút tách đôi: căn giữa để nhãn bên cạnh (ví dụ AR6 · GWP-100) không bị kéo cao. */
+  .actions:has(> .split-button) { align-items: center; }
+  .split-button > .split-main { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  .split-button > .split-toggle {
+    display: grid;
+    place-items: center;
+    min-width: 36px;
+    margin-left: -1px;
+    padding: 0 9px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+  .split-button.small > .split-toggle { min-width: 32px; padding: 0 7px; }
+  /* Vạch ngăn giữa hai nửa khi nút có nền màu. */
+  .split-button > .split-toggle:is(.primary, .report-action) { border-left-color: #ffffff59; }
+  .split-button > .split-toggle.report-action { border-left-color: #24211640; }
+  .split-toggle svg { width: 16px; height: 16px; transition: transform .15s ease-out; }
+  .split-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+  .split-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 30;
+    display: grid;
+    gap: 2px;
+    min-width: max(100%, 200px);
+    padding: 5px;
+    border: 1px solid var(--line, #dce5df);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 12px 28px -10px #12392a40;
+  }
+  .split-menu[hidden] { display: none; }
+  /* Nút nằm sát mép phải (đầu trang, dải chọn kỳ): menu canh phải để không tràn ra ngoài. */
+  :is(.page-head, .period-strip) .split-menu { left: auto; right: 0; }
+  .split-menu > button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    min-height: 36px;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--ink, #203d35);
+    font-weight: 550;
+    text-align: left;
+    white-space: nowrap;
+  }
+  .split-menu > button:hover, .split-menu > button:focus-visible { background: #eef3ef; }
+  .split-menu > button:focus-visible { outline: 2px solid #9ac76c; outline-offset: -2px; }
+  .split-menu > button.danger { color: #a43d35; }
+  .split-menu > button.danger:hover, .split-menu > button.danger:focus-visible { background: #fbeeec; }
+
+  @media (prefers-reduced-motion: reduce) {
+    button, .split-toggle svg { transition: none; }
+  }
+}
+
+@media print {
+  .split-button { display: none; }
+}
