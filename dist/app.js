@@ -1,6 +1,18 @@
 'use strict';
 const E=Engine,KEY='greenledger.v1';let db,current,revision=null,stale=false,tab=0,library='fuels',report=3,storageError='';
-try{const raw=localStorage.getItem(KEY);revision=raw;db=raw?mergeWorkbookFactors(E.updateDefaultGwp(JSON.parse(raw))):mergeIpccFuels(mergeWorkbookFactors(E.seed()));E.validate(db);}catch(e){db=mergeIpccFuels(mergeWorkbookFactors(E.seed()));storageError='Không đọc được dữ liệu cũ: '+e.message+'. Dữ liệu cũ chưa bị ghi đè. Hãy sao lưu hoặc nhập bản hợp lệ.';}
+function initialInventory() {
+  const initial = mergeIpccFuels(mergeWorkbookFactors(E.seed()));
+  for (const key of ['fuels', 'gases', 'other', 'grid']) {
+    const id = entry => key === 'grid' ? entry.year : entry.id;
+    const entries = new Map(initial[key].map(entry => [id(entry), entry]));
+    for (const entry of structuredClone(publishedInventory2025[key])) entries.set(id(entry), entry);
+    initial[key] = [...entries.values()];
+  }
+  initial.periods = [structuredClone(publishedInventory2025.period)];
+  return initial;
+}
+
+try{const raw=localStorage.getItem(KEY);revision=raw;db=raw?mergeWorkbookFactors(E.updateDefaultGwp(JSON.parse(raw))):initialInventory();E.validate(db);}catch(e){db=initialInventory();storageError='Không đọc được dữ liệu cũ: '+e.message+'. Dữ liệu cũ chưa bị ghi đè. Hãy sao lưu hoặc nhập bản hợp lệ.';}
 current=db.periods[0].id;
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const n=(v,d=2)=>Number(v||0).toLocaleString('vi-VN',{maximumFractionDigits:d,minimumFractionDigits:d});
@@ -39,8 +51,101 @@ function pageOptions() {
   return '';
 }
 
-function render(){const splitScroll=captureSplitScroll();let s=E.summary(p(),db);document.title='GreenLedger · '+names[tab];document.querySelector('#app').innerHTML=`${webToolbar()}<div class="layout"><aside class="sidebar"><div class="brand"><img class="brand-mark" src="greenledger-brand.png" alt=""><span class="brand-name"><strong>GreenLedger</strong><span class="brand-facility">NHIỆT ĐIỆN DUYÊN HẢI 1</span></span></div><div class="tagline">KIỂM KÊ KHÍ NHÀ KÍNH</div><nav class="nav" aria-label="Điều hướng chính">${names.map((x,i)=>btn(icon(i)+x,'tab',i===tab?'active':'',`data-tab="${i}"`)).join('')}</nav><div class="sidebar-bottom"><span class="dot"></span>Dữ liệu lưu trên trình duyệt<br>IPCC 2006 · GWP-100 AR6<br><div style="margin-top:16px;color:#8eaf9b">Công cụ kiểm kê cấp cơ sở<br>Phiên bản 1.17</div></div></aside><div class="main"><header class="topbar"><div class="breadcrumb"><strong>Duyên Hải 1</strong> &nbsp; / &nbsp; Không gian làm việc &nbsp; / &nbsp; <strong>${names[tab]}</strong></div><div class="top-actions"><span class="save-state"><span class="dot"></span>${storageError?'Cần kiểm tra lưu trữ':'Have a nice day'}</span><span class="avatar">GL</span></div></header><main><div class="page-head"><div><h1>${tab===0?'Tổng quan kiểm kê':names[tab]}</h1><p class="sub">${['Theo dõi dấu chân carbon, hiểu rõ từng nguồn phát thải.','Quản lý số liệu gốc và chứng từ của từng nguồn phát thải.','Truy xuất từng bước tính và các thành phần độ không đảm bảo đo.','Tổng hợp số liệu cho hồ sơ kiểm kê cấp cơ sở.','Quản lý hệ số, khoảng giá trị và nguồn tài liệu tham chiếu.','Giữ một bản dữ liệu độc lập trên thiết bị của bạn.','Tìm và xem bảng tham chiếu IPCC ngay trong ứng dụng.','Công thức, ví dụ tính và các bước lập báo cáo.'][tab]}</p></div><div class="actions">${tab===2?btn('Phương pháp &amp; giả định','calc-method','method-button','aria-haspopup="dialog"'):''}${pageOptions()}${[2,4].includes(tab)?btn('Tính nhiệt trị','calorific','method-button','aria-haspopup="dialog"'):''}${splitWorkspaceToggle()}${tab===7?guideDownloadButton():tab===6?'':btn('Xuất báo cáo','go-report','primary')}</div></div>${storageError?`<div class="error-banner">${esc(storageError)} ${btn('Tải dữ liệu gốc','raw-backup','small')}</div>`:''}<section class="period-strip" ${(tab===7||tab===6&&!splitWorkspaceVisible())?'hidden':''}><div><label for="period">Kỳ kiểm kê hiện tại</label><select id="period">${db.periods.map(x=>`<option value="${esc(x.id)}" ${x.id===p().id?'selected':''}>${x.year} · ${esc(x.facility)}</option>`).join('')}</select></div><div class="actions">${badge(p().gwp.toUpperCase()+' · GWP-100','blue')}${btn('+ Kỳ mới','new-period','small')}${btn('Nhân bản','clone-period','small')}${btn('Thông tin cơ sở','facility','small')}${btn('Xóa kỳ','delete-period','small danger')}</div></section>${renderSplitWorkspace(s,tab===0?dashboard(s):tab===1?activities(s):tab===2?calculations(s):tab===3?reports(s):tab===4?factors():tab===6?ipccPage():tab===7?inventoryGuide():backup(s))}<footer class="footer"><span>GreenLedger · Kiểm kê khí nhà kính cấp cơ sở</span><span>Đơn vị kết quả: tấn CO₂ tương đương (tCO₂e)</span></footer></main></div></div>`;restoreSplitScroll(splitScroll);}
-function kpi(label,num,unit,featured=false,mark='↗'){return `<div class="kpi ${featured?'featured':''}"><span class="kpi-mark">${mark}</span><div class="label">${label}</div><div class="number">${num}</div><div class="unit">${unit}</div></div>`}
+const pageDescriptions = [
+  '',
+  'Nhập số liệu hoạt động, thiết bị đo và chứng từ của từng nguồn.',
+  'Kiểm tra công thức, hệ số và độ không đảm bảo đo của từng nguồn.',
+  'Xem và xuất hồ sơ kiểm kê theo kỳ đã chọn.',
+  'Tra cứu hệ số phát thải, GWP và tài liệu tham chiếu.',
+  'Sao lưu hồ sơ và xuất số liệu kiểm kê.',
+  'Tìm bảng và tài liệu tham chiếu IPCC.',
+  'Công thức, ví dụ và các bước lập báo cáo.',
+];
+
+function workspaceNavigation() {
+  const sections = [
+    ['Kiểm kê', [0, 1, 2, 3]],
+    ['Tài liệu và dữ liệu', [4, 6, 7, 5]],
+  ];
+  return sections.map(([label, items]) => `<div class="nav-section">
+    <p class="nav-heading">${label}</p>
+    ${items.map(i => btn(icon(i) + names[i], 'tab', i === tab ? 'active' : '',
+      `data-tab="${i}"${i === tab ? ' aria-current="page"' : ''}`)).join('')}
+  </div>`).join('');
+}
+
+function workspaceHeader() {
+  const period = p();
+  const actions = [
+    tab === 2 ? btn('Phương pháp &amp; giả định', 'calc-method', 'method-button', 'aria-haspopup="dialog"') : '',
+    [2, 4].includes(tab) ? btn('Tính nhiệt trị', 'calorific', 'method-button', 'aria-haspopup="dialog"') : '',
+    splitWorkspaceToggle(),
+    tab === 7 ? guideDownloadButton() : tab === 6 ? '' : btn(tab === 3 ? 'In / Lưu PDF' : 'Xuất báo cáo', tab === 3 ? 'print' : 'go-report', 'primary report-action'),
+  ].join('');
+  return `${tab === 0 ? overviewHero(period) : `<div class="page-head">
+    <div><h1>${names[tab]}</h1>
+    <p class="sub">${pageDescriptions[tab]}</p></div>
+    <div class="actions">${actions}</div>
+  </div>`}
+  ${storageError ? `<div class="error-banner" role="alert">${esc(storageError)} ${btn('Tải dữ liệu gốc', 'raw-backup', 'small')}</div>` : ''}
+  <section class="period-strip${tab === 2 ? ' calculation-period-strip' : ''}" ${(tab === 7 || tab === 6 && !splitWorkspaceVisible()) ? 'hidden' : ''} aria-label="Quản lý kỳ kiểm kê">
+    <div class="period-field">
+      <label for="period">Kỳ kiểm kê</label>
+      <select id="period">${db.periods.map(x => `<option value="${esc(x.id)}" ${x.id === period.id ? 'selected' : ''}>${x.year} · ${esc(x.facility)}</option>`).join('')}</select>
+    </div>
+    <div class="actions period-actions">
+      ${badge(period.gwp.toUpperCase() + ' · GWP-100', 'blue')}
+      ${btn('+ Kỳ mới', 'new-period', 'small period-add')}
+      <details class="period-menu">
+        <summary>Quản lý kỳ</summary>
+        <div class="period-menu-items">
+          ${btn('Nhân bản', 'clone-period', 'small')}
+          ${btn('Thông tin cơ sở', 'facility', 'small')}
+          ${btn('Xóa kỳ', 'delete-period', 'small danger')}
+        </div>
+      </details>
+    </div>
+  </section>
+  ${pageOptions()}`;
+}
+
+function render() {
+  const splitScroll = captureSplitScroll();
+  const summary = E.summary(p(), db);
+  const navigationScroll = document.querySelector('.nav')?.scrollLeft ?? 0;
+  const activeTab = document.activeElement?.closest('.nav button[data-tab]')?.dataset.tab;
+  const views = [dashboard, activities, calculations, reports, factors, backup, ipccPage, inventoryGuide];
+  document.title = 'GreenLedger · ' + names[tab];
+  parkOverviewModel();
+  document.querySelector('#app').innerHTML = `<a class="skip-link" href="#main-content">Đến nội dung chính</a>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="brand"><img class="brand-mark" src="greenledger-brand.png" alt=""><span class="brand-name"><strong>GreenLedger</strong><span class="brand-facility">Kiểm kê khí nhà kính</span></span></div>
+        <nav class="nav" aria-label="Điều hướng chính">${workspaceNavigation()}</nav>
+        <div class="sidebar-bottom"><span class="dot"></span>Lưu dữ liệu trên thiết bị</div>
+      </aside>
+      <div class="main">
+        <header class="topbar no-print">
+          <div class="breadcrumb"><span>Kiểm kê khí nhà kính</span><span aria-hidden="true">/</span><strong>${names[tab]}</strong></div>
+          ${webToolbar()}
+        </header>
+        <main id="main-content" tabindex="-1">
+          ${workspaceHeader()}
+          ${renderSplitWorkspace(summary, views[tab](summary))}
+          <footer class="footer"><span>GreenLedger</span><span>tCO₂e · Tấn CO₂ tương đương</span></footer>
+        </main>
+      </div>
+    </div>`;
+  restoreSplitScroll(splitScroll);
+  mountOverviewModel();
+  document.querySelector('.nav').scrollLeft = navigationScroll;
+  if (activeTab !== undefined) document.querySelector(`.nav button[data-tab="${activeTab}"]`)?.focus({ preventScroll: true });
+}
+
+function kpi(label, value, unit) {
+  return `<div class="kpi"><dt class="label">${label}</dt><dd class="number">${value}</dd><dd class="unit">${unit}</dd></div>`;
+}
+
 function emissionsByGroup(values) {
   const positive = values.filter(value => value > 0);
   const max = Math.max(...positive, 0);
@@ -64,7 +169,53 @@ function emissionsByGroup(values) {
   </ul>
   ${logarithmic ? '<p class="emissions-scale sub">Thang logarit để thấy rõ nhóm nhỏ. Giá trị tCO₂e hiển thị bên phải.</p>' : ''}`;
 }
-function dashboard(s){let colors=['#427b5a','#9bc276','#d9b76d','#6e94b6'],total=s.total||1,acc=0;let grad=s.gases.map((v,i)=>{let start=acc;acc+=v/total*100;return `${colors[i]} ${start}% ${acc}%`}).join(',');let gasNames=['CO₂','CH₄','N₂O','HFCs / môi chất'];return `<div class="kpis">${kpi('Tổng phát thải',n(s.total),'tCO₂e · Phạm vi 1 + 2',true)}${kpi('Phạm vi 1',n(s.scope1),'tCO₂e · Phát thải trực tiếp',false,'◉')}${kpi('Phạm vi 2',n(s.scope2),'tCO₂e · Điện năng mua vào',false,'ϟ')}${kpi('Độ không đảm bảo đo','± '+n(s.percent)+'%','Mức phủ xấp xỉ 95% · k = '+n(s.k,2),false,'±')}</div><div class="charts"><section class="panel"><div class="panel-head"><div><h2>Phát thải theo nhóm nguồn</h2><p class="sub">8 nhóm nguồn · tCO₂e</p></div><div class="legend"><span><i class="swatch" style="background:#427b5a"></i>Phạm vi 1</span><span><i class="swatch" style="background:#2c5e8a"></i>Phạm vi 2</span></div></div>${emissionsByGroup(s.groups)}</section><section class="panel"><div class="panel-head"><div><h2>Cơ cấu khí nhà kính</h2><p class="sub">Quy đổi theo ${p().gwp.toUpperCase()} · GWP-100</p></div></div><div class="gas-chart"><div class="donut" role="img" aria-label="Cơ cấu phát thải theo khí" style="background:${s.total?'conic-gradient('+grad+')':'#e9eee9'}"><div class="donut-center"><strong>${s.total?'100':'0'}%</strong>CO₂ tương đương</div></div><div class="gas-legend">${s.gases.map((v,i)=>`<div class="gas-line" title="${n(v,4)} tCO₂e"><span><i class="swatch" style="background:${colors[i]}"></i>${gasNames[i]}</span><strong>${n(v/total*100,1)}%</strong></div>`).join('')}</div></div></section></div><section class="panel"><div class="panel-head"><div><h2>Nguồn phát thải trong kỳ</h2><p class="sub">${p().rows.length} nguồn đã khai báo <span class="sample-label">${(p().notes||'').includes('minh họa')?badge('Dữ liệu mẫu'):''}</span></p></div>${btn('Quản lý dữ liệu','go-data','small')}</div>${overviewSources(s)}<div class="note">CO₂ sinh học báo cáo riêng: <strong>${n(s.bio,4)} tấn CO₂</strong>. Không cộng vào tổng phát thải Phạm vi 1 + 2.</div></section><section class="panel"><div class="panel-head"><div><h2>So sánh các kỳ kiểm kê</h2><p class="sub">So sánh trực tiếp số liệu đã lưu; kiểm tra cùng ranh giới và phương pháp trước khi đánh giá xu hướng.</p></div></div><div class="comparison">${db.periods.slice().sort((a,b)=>a.year-b.year).map(x=>{let a=E.summary(x,db);return `<div class="compare-item"><span>${x.year} · ${esc(x.facility)}</span><strong>${n(a.total)}</strong><span class="sub">tCO₂e · ${x.rows.length} nguồn · ${x.gwp.toUpperCase()}</span></div>`}).join('')}</div></section>`;}
+function dashboard(summary) {
+  const colors = ['#1f604c', '#81a969', '#bc8b3f', '#47779b'];
+  const gasNames = ['CO₂', 'CH₄', 'N₂O', 'HFCs / môi chất'];
+  const total = summary.total || 1;
+  const shares = summary.gases.map(value => value / total * 100);
+  const dominant = shares.indexOf(Math.max(...shares));
+  const segments = [];
+  let stop = 0;
+  shares.forEach((share, index) => {
+    if (share > 0) segments.push(`${colors[index]} ${stop}% ${stop + share}%`);
+    stop += share;
+  });
+  const ring = segments.length ? `conic-gradient(${segments.join(',')})` : '#e8eeea';
+  return `<div class="dashboard">
+    <div class="charts">
+      <section class="panel emissions-panel">
+        <div class="panel-head"><div><h2>Phát thải theo nhóm nguồn</h2><p class="sub">8 nhóm nguồn · tCO₂e</p></div>
+          <div class="legend"><span><i class="swatch scope-one"></i>Phạm vi 1</span><span><i class="swatch scope-two"></i>Phạm vi 2</span></div>
+        </div>
+        ${emissionsByGroup(summary.groups)}
+      </section>
+      <section class="panel gas-panel">
+        <div class="panel-head"><div><h2>Cơ cấu khí nhà kính</h2><p class="sub">Quy đổi theo ${p().gwp.toUpperCase()} · GWP-100</p></div></div>
+        <div class="gas-chart">
+          <div class="donut" aria-hidden="true" style="background:${ring}">
+            <div class="donut-center"><strong>${n(shares[dominant], 1)}%</strong>${summary.total ? gasNames[dominant] : 'Tổng phát thải'}</div>
+          </div>
+          <div class="gas-legend">${shares.map((share, i) => `<div class="gas-line" title="${n(summary.gases[i], 4)} tCO₂e"><span><i class="swatch" style="background:${colors[i]}"></i>${gasNames[i]}</span><strong>${n(share, 1)}%</strong></div>`).join('')}</div>
+        </div>
+      </section>
+    </div>
+    <section class="panel">
+      <div class="panel-head"><div><h2>Nguồn phát thải trong kỳ</h2><p class="sub">${p().rows.length} nguồn đã khai báo ${(p().notes || '').includes('minh họa') ? badge('Dữ liệu mẫu') : ''}</p></div>
+        ${btn('Quản lý dữ liệu', 'go-data', 'small')}
+      </div>
+      ${overviewSources(summary)}
+      <div class="note">CO₂ sinh học báo cáo riêng: <strong>${n(summary.bio, 4)} tấn CO₂</strong>. Không cộng vào tổng phát thải Phạm vi 1 + 2.</div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><div><h2>So sánh các kỳ kiểm kê</h2><p class="sub">Đối chiếu các kỳ có cùng ranh giới và phương pháp.</p></div></div>
+      <div class="comparison">${db.periods.slice().sort((a, b) => a.year - b.year).map(period => {
+        const result = E.summary(period, db);
+        return `<div class="compare-item"><span>${period.year} · ${esc(period.facility)}</span><strong>${n(result.total)}</strong><span class="sub">tCO₂e · ${period.rows.length} nguồn · ${period.gwp.toUpperCase()}</span></div>`;
+      }).join('')}</div>
+    </section>
+  </div>`;
+}
 function unit(r){if(r.group<2)return db.fuels.find(x=>x.id===r.factor)?.unit||'';return ['','','giờ công','m³','kg nạp bù','kg nạp bù','tấn','kWh'][r.group]}
 function reports(s){if(report===3)return facilityReport(s);return `<section class="panel" id="report-sheet"><div class="report-heading">${report===2?'<p class="sub">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>Độc lập · Tự do · Hạnh phúc</p>':''}<p class="sub">${esc(p().facility)}</p><h2 style="margin:12px 0;font-size:23px">Báo cáo kiểm kê khí nhà kính năm ${p().year}</h2><span class="sub">${reportTitles[report]} · ${p().gwp.toUpperCase()} · tCO₂e</span></div>${report===2?'<h3>I. Thông tin cơ sở</h3>':''}<div class="text-block"><strong>Cơ sở:</strong> ${esc(p().facility)}\n<strong>Địa chỉ:</strong> ${esc(p().address||'Chưa khai báo')}\n<strong>Người phụ trách:</strong> ${esc(p().contact||'Chưa khai báo')}\n<strong>Ranh giới:</strong> ${esc(p().boundary)}</div>${report===1?`<h3 style="margin-top:24px">1. Mô tả phương pháp và thu thập số liệu</h3><p class="text-block">Phương pháp hệ số phát thải IPCC 2006 Tier 1; chuyển đổi GWP-100 theo ${p().gwp.toUpperCase()}. Số liệu hoạt động từ chứng từ và thiết bị khai báo trong phụ lục. Độ không đảm bảo đo dùng hệ số phủ k = ${n(s.k,2)}. Cách xử lý đầu vào chung được ghi trong phần Phương pháp &amp; giả định.</p><h3>2. Kết quả kiểm kê</h3>`:''}${report===2?`<p class="text-block"><strong>Giấy phép kinh doanh:</strong> ${esc(p().license||'Chưa khai báo')}<br><strong>Đại diện pháp luật:</strong> ${esc(p().representative||'Chưa khai báo')}<br><strong>Ngành nghề:</strong> ${esc(p().sector||'Chưa khai báo')}</p><h3>II. Hoạt động sản xuất và dữ liệu của cơ sở</h3><p class="text-block">${esc(p().operations||'Chưa mô tả công nghệ, hoạt động, nguồn phát thải, bể hấp thụ và giới hạn dữ liệu.')}</p><h3>III. Phương pháp, số liệu và kết quả kiểm kê</h3><p class="text-block">Tính phát thải bằng số liệu hoạt động và hệ số tra cứu; quy đổi ${p().gwp.toUpperCase()} GWP-100. Bảng dưới đây ghi nguồn số liệu và hệ số theo từng dòng.</p><div class="table-wrap"><table><thead><tr><th>Nguồn / chứng từ</th><th>Thiết bị</th><th>Số liệu</th><th>Hệ số / nguồn tham chiếu</th></tr></thead><tbody>${s.rows.map(r=>`<tr><td>${esc(r.row.name)}<br>${esc(r.row.evidence)}</td><td>${esc(r.row.device)}<br>u AD: ${n(r.row.ad,4)}%</td><td>${n(r.amount)} ${esc(unit(r.row))}</td><td>${esc(r.row.factor)}<br><span class="source-text">${esc(r.source)}</span></td></tr>`).join('')}</tbody></table></div><p class="text-block"><strong>Phạm vi 1:</strong> ${n(s.scope1,4)} tCO₂e<br><strong>Phạm vi 2:</strong> ${n(s.scope2,4)} tCO₂e<br><strong>Tổng:</strong> ${n(s.total,4)} tCO₂e<br><strong>CO₂ sinh học báo cáo riêng:</strong> ${n(s.bio,4)} tấn CO₂</p><p class="text-block">${esc(p().notes||'Chưa đánh giá độ đầy đủ, độ tin cậy và các biện pháp cải thiện.')}</p><p class="text-block">Đại diện cơ sở: ____________________ &nbsp; Ngày: ____ / ____ / ______</p>`:`<div class="table-wrap" style="margin-top:22px"><table><thead><tr><th>Nhóm nguồn</th><th>Phạm vi</th><th class="num">CO₂</th><th class="num">CH₄ quy đổi</th><th class="num">N₂O quy đổi</th><th class="num">Môi chất quy đổi</th><th class="num">Tổng tCO₂e</th></tr></thead><tbody>${E.groups.map((x,i)=>{let rows=s.rows.filter(r=>r.row.group===i);return `<tr><td>${x}</td><td>${i===7?'2':'1'}</td>${[0,1,2,3].map(k=>`<td class="num">${n(rows.reduce((t,r)=>t+r.gases[k],0),4)}</td>`).join('')}<td class="num">${n(s.groups[i],4)}</td></tr>`}).join('')}<tr><td colspan="6"><strong>Tổng phát thải Phạm vi 1 + 2</strong></td><td class="num"><strong>${n(s.total,4)}</strong></td></tr><tr><td colspan="6">CO₂ sinh học báo cáo riêng (tấn CO₂)</td><td class="num">${n(s.bio,4)}</td></tr></tbody></table></div>`}<p class="text-block">Độ không đảm bảo đo mở rộng (95%): ± ${n(s.U,4)} tCO₂e (± ${n(s.percent)}%).</p>${report===1?`<h3>3. Ghi chú, đánh giá và kế hoạch cải thiện</h3><p class="text-block">${esc(p().notes||'Chưa bổ sung nhận xét.')}</p><p class="text-block">Đại diện cơ sở: ____________________ &nbsp; Ngày: ____ / ____ / ______</p>`:''}${[...new Set(s.rows.flatMap(r=>r.warnings))].map(w=>`<div class="note warning">${esc(w)}</div>`).join('')}<div class="note warning">Bản tổng hợp hỗ trợ lập hồ sơ, chưa phải biểu mẫu pháp lý được chứng nhận. Cần đối chiếu mẫu báo cáo hiện hành, phạm vi khí (đặc biệt HCFC-22), nguồn hệ số và yêu cầu thẩm định trước khi nộp. Các hệ số khởi tạo theo tài liệu người dùng, có thể chỉnh sửa tại Thư viện hệ số.</div><p class="source-text">Tài liệu: <a href="https://www.ipcc-nggip.iges.or.jp/public/2006gl/" target="_blank" rel="noopener">IPCC 2006</a> · <a href="https://www.ipcc.ch/report/ar6/wg1/chapter/chapter-7/" target="_blank" rel="noopener">IPCC AR6 Ch.7</a> · <a href="https://moit.gov.vn/phat-trien-ben-vung/ban-hanh-thong-tu-quy-dinh-ky-thuat-do-dac-tham-dinh-giam-nhe-phat-thai-khi-nha-kinh.html" target="_blank" rel="noopener">Thông tin TT 38/2023/TT-BCT</a> · <a href="https://congbao.chinhphu.vn/tai-ve-van-ban-so-06-2022-nd-cp-36560-39440" target="_blank" rel="noopener">Mẫu 06 Phụ lục II (văn bản gốc)</a></p></section><div class="actions no-print" style="margin-bottom:24px">${btn('In / Lưu PDF','print','primary')}${btn('Xuất Excel .xlsx','xlsx')+btn('Xuất CSV','csv')}</div>`;}
 function backup(s){return `<div class="backup-grid"><section class="panel"><h2>Sao lưu toàn bộ dữ liệu</h2><p class="sub">Bao gồm mọi kỳ kiểm kê, số liệu hoạt động và thư viện hệ số tùy chỉnh.</p><p class="number-lg">${db.periods.length} <span class="sub">kỳ kiểm kê</span></p>${btn('Tải bản sao lưu .json','json','primary')}<p class="source-text">Tệp JSON có thể nhập lại trên thiết bị khác. Số liệu được lưu trong trình duyệt.</p></section><section class="panel"><h2>Khôi phục từ bản sao lưu</h2><p class="sub">Kiểm tra cấu trúc và tham chiếu trước khi thay thế dữ liệu hiện tại.</p><p><input class="file-input" id="import" type="file" accept=".json,application/json" aria-label="Chọn tệp JSON để khôi phục"></p><div class="note warning">Nhập dữ liệu sẽ thay thế toàn bộ hồ sơ hiện có. Bạn sẽ được xem số kỳ và xác nhận trước khi áp dụng.</div></section><section class="panel"><h2>Xuất kết quả kỳ ${p().year}</h2><p class="sub">Bảng CSV dùng UTF-8, mở được trong Excel và các công cụ phân tích dữ liệu.</p><div class="actions" style="margin-top:20px">${btn('Tải Excel .xlsx','xlsx','primary')+btn('Tải bảng CSV','csv')}${btn('In / Lưu PDF','print','primary')}</div></section><section class="panel"><h2>Khôi phục dữ liệu mẫu</h2><p class="sub">50.000 lít DO cố định, bộ hệ số khởi tạo và kỳ kiểm kê năm 2024.</p><p class="source-text">Thao tác thay thế toàn bộ dữ liệu; nên tải bản sao lưu trước.</p>${btn('Khôi phục dữ liệu mẫu','reset','danger')}</section></div><div class="note">Ứng dụng lưu số liệu trên trình duyệt này. Dùng bản sao lưu JSON để chuyển dữ liệu sang máy khác.</div>`;}

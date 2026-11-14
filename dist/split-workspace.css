@@ -14,27 +14,9 @@
 .split-calculation .calculation-filters { position: static; max-height: none; }
 .split-calculation-filters { margin-bottom: 12px; }
 .split-calculation-filters > summary { cursor: pointer; padding: 8px 0; font-weight: 600; }
-.split-calculation .calculation-card-summary { grid-template-columns: 48px minmax(0, 1fr); }
-.split-calculation .calculation-card-total { grid-column: 1 / -1; justify-content: flex-start; }
-.split-calculation .calculation-card-action { grid-column: 1 / -1; align-items: flex-start; }
 .split-calculation .calc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .split-calculation .calc-item strong { overflow-wrap: anywhere; }
 .split-scroll :is(.table-wrap, .activity-table-shell) { max-width: 100%; }
-@container (min-width: 540px) {
-  .split-calculation .calculation-source-list:not(.calculation-source-grid) .calculation-card-summary {
-    grid-template-columns: 48px minmax(0, 1fr) max-content 112px;
-    gap: 10px;
-  }
-  .split-calculation .calculation-source-list:not(.calculation-source-grid) .calculation-card-total {
-    grid-column: auto;
-    justify-content: flex-end;
-  }
-  .split-calculation .calculation-source-list:not(.calculation-source-grid) .calculation-card-action {
-    grid-column: auto;
-    flex-direction: column;
-    align-items: flex-end;
-  }
-}
 @media (max-width: 900px) {
   .split-workspace { grid-template-columns: 1fr; }
   .split-scroll { height: 450px; }

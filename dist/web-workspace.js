@@ -21,14 +21,14 @@ function webToolbar() {
 }
 
 document.addEventListener('click', event => {
-  for (const menu of document.querySelectorAll('.web-toolbar details[open]')) {
+  for (const menu of document.querySelectorAll('.web-toolbar details[open], .period-menu[open]')) {
     if (!menu.contains(event.target)) menu.open = false;
   }
 });
 
 document.addEventListener('keydown', event => {
   if (event.key !== 'Escape') return;
-  const menu = document.activeElement?.closest('.web-toolbar details[open]');
+  const menu = document.activeElement?.closest('.web-toolbar details[open], .period-menu[open]');
   if (menu) {
     menu.open = false;
     menu.querySelector('summary').focus();
