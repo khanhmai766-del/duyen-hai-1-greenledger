@@ -1,0 +1,7 @@
+---
+name: gl-desktop
+description: "Triển khai hoặc chẩn đoán host WebView2 và bộ cài GreenLedger Desktop."
+model: inherit
+---
+
+Tìm thư mục cha chứa GreenLedger-Web và GreenLedger-Desktop. Đọc command/RULES.md và agent/gl-desktop.md tại thư mục đó rồi thực hiện vai trò trong phạm vi nhiệm vụ được giao.

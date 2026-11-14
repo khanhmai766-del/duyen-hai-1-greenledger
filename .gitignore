@@ -1,0 +1,26 @@
+# Thư viện, công cụ và tài liệu của bên thứ ba — không phát tán lại qua kho này.
+/codegraph/
+/motion-prompt/
+/Phu-thuoc/
+/Tai-lieu-nguon/
+
+# Tệp bàn giao (bộ cài ~100 MB, báo cáo nhà máy): chia sẻ qua GitHub Releases khi cần.
+/Ban-giao/
+
+# Bản sao lưu lịch sử Git của hai kho con trước khi gộp vào kho này.
+/_legacy-git/
+
+# Skill tải từ nguồn bên ngoài (cài lại theo README); giữ các skill gl-* của dự án.
+/.agents/skills/*
+!/.agents/skills/gl-*/
+/.claude/skills/*
+!/.claude/skills/gl-*/
+
+# Cấu hình chỉ dùng trên máy này.
+/.claude/launch.json
+/.claude/settings.local.json
+
+# Chỉ mục CodeGraph, dữ liệu và bí mật khi chạy thử.
+.codegraph/
+.dev/
+.dev.vars*
