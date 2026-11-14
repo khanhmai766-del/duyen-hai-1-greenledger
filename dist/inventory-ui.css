@@ -131,9 +131,10 @@
   .page-head .sub { font-size: 15px; }
   .period-strip { gap: 10px 16px; padding: 10px 14px; margin-bottom: 20px; border-radius: 8px; }
   .period-strip[hidden] { display: none; }
-  .period-field { flex: 1; min-width: 0; }
-  .period-strip label { font-size: 12px; font-weight: 600; margin: 0 0 3px; }
-  .period-strip select { width: 100%; max-width: min(100%, 520px); min-height: 33px; padding: 4px 18px 4px 0; text-overflow: ellipsis; }
+  /* Nhãn "Kỳ kiểm kê" và ô chọn kỳ nằm trên cùng một hàng. */
+  .period-field { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+  .period-strip label { flex-shrink: 0; font-size: 12px; font-weight: 600; margin: 0; white-space: nowrap; }
+  .period-strip select { flex: 1 1 auto; min-width: 0; width: 100%; max-width: min(100%, 520px); min-height: 33px; padding: 4px 18px 4px 0; text-overflow: ellipsis; }
   .period-actions { align-items: center; }
   .period-add { color: var(--green); border-color: #c7d9ce; }
   .period-menu { position: relative; }
