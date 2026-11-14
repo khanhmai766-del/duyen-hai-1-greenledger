@@ -17,6 +17,7 @@ function webToolbar() {
         <a href="https://www.ipcc-nggip.iges.or.jp/public/2019rf/pdf/2019rf_all_in.zip">Bổ sung 2019 (.zip)</a>
       </div>
     </details>
+    ${typeof accountToolbar === 'function' ? accountToolbar() : ''}
   </nav>`;
 }
 

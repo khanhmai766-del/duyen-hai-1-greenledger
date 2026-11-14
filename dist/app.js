@@ -17,7 +17,7 @@ current=db.periods[0].id;
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const n=(v,d=2)=>Number(v||0).toLocaleString('vi-VN',{maximumFractionDigits:d,minimumFractionDigits:d});
 const p=()=>db.periods.find(p=>p.id===current)||db.periods[0];
-const names=['Tổng quan','Dữ liệu hoạt động','Tính toán & ĐKĐBĐ','Báo cáo tổng hợp','Thư viện hệ số','Sao lưu & xuất dữ liệu','Tra cứu IPCC','Hướng dẫn kiểm kê'];
+const names=['Tổng quan','Dữ liệu hoạt động','Tính toán & ĐKĐBĐ','Báo cáo tổng hợp','Thư viện hệ số','Sao lưu & xuất dữ liệu','Tra cứu IPCC','Hướng dẫn kiểm kê','Tài khoản & phân quyền'];
 const paths = [
   'M3 3h8v8H3z M14 3h7v5h-7z M3 14h8v7H3z M14 11h7v10h-7z',
   'M9 5H5v16h14V5h-4 M9 3h6v4H9z M8 12l1 1 2-2 M13 12h3 M8 17l1 1 2-2 M13 17h3',
@@ -27,6 +27,7 @@ const paths = [
   'M7 17H6a4 4 0 1 1 1-7.9 5.5 5.5 0 0 1 10.7 1.4A3.3 3.3 0 1 1 18 17h-1 M12 12v9 M9 18l3 3 3-3',
   'M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0z M15 15l6 6 M7 10h6 M10 7v6',
   'M12 6c-3-2-6-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1z M12 6v14 M6 9h3 M6 12h3 M15 9h3 M15 12h3',
+  'M12 3l7 3v5c0 4.5-3 8.4-7 10-4-1.6-7-5.5-7-10V6z M12 8.5a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4z M8.3 16.3c.8-1.6 2.1-2.4 3.7-2.4s2.9.8 3.7 2.4',
 ];
 const icon=i=>`<svg class="icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[i]}"></path></svg>`;
 const btn=(text,action,cls='',extra='')=>`<button type="button" class="${cls}" data-action="${action}" ${extra}>${text}</button>`;
@@ -60,12 +61,14 @@ const pageDescriptions = [
   'Sao lưu hồ sơ và xuất số liệu kiểm kê.',
   'Tìm bảng và tài liệu tham chiếu IPCC.',
   'Công thức, ví dụ và các bước lập báo cáo.',
+  'Đổi mật khẩu, cấp tài khoản và phân quyền theo nhiệm vụ.',
 ];
 
 function workspaceNavigation() {
   const sections = [
     ['Kiểm kê', [0, 1, 2, 3]],
     ['Tài liệu và dữ liệu', [4, 6, 7, 5]],
+    ['Hệ thống', [8]],
   ];
   return sections.map(([label, items]) => `<div class="nav-section">
     <p class="nav-heading">${label}</p>
@@ -80,7 +83,7 @@ function workspaceHeader() {
     tab === 2 ? btn('Phương pháp &amp; giả định', 'calc-method', 'method-button', 'aria-haspopup="dialog"') : '',
     [2, 4].includes(tab) ? btn('Tính nhiệt trị', 'calorific', 'method-button', 'aria-haspopup="dialog"') : '',
     splitWorkspaceToggle(),
-    tab === 7 ? guideDownloadButton() : tab === 6 ? '' : tab === 3 ? exportSplitButton('primary report-action') : btn('Xuất báo cáo', 'go-report', 'primary report-action'),
+    tab === 7 ? guideDownloadButton() : tab === 6 || tab === 8 ? '' : tab === 3 ? exportSplitButton('primary report-action') : btn('Xuất báo cáo', 'go-report', 'primary report-action'),
   ].join('');
   return `${tab === 0 ? overviewHero(period) : `<div class="page-head">
     <div><h1>${names[tab]}</h1>
@@ -88,7 +91,7 @@ function workspaceHeader() {
     <div class="actions">${actions}</div>
   </div>`}
   ${storageError ? `<div class="error-banner" role="alert">${esc(storageError)} ${btn('Tải dữ liệu gốc', 'raw-backup', 'small')}</div>` : ''}
-  <section class="period-strip${tab === 2 ? ' calculation-period-strip' : ''}" ${(tab === 7 || tab === 6 && !splitWorkspaceVisible()) ? 'hidden' : ''} aria-label="Quản lý kỳ kiểm kê">
+  <section class="period-strip${tab === 2 ? ' calculation-period-strip' : ''}" ${(tab === 7 || tab === 8 || tab === 6 && !splitWorkspaceVisible()) ? 'hidden' : ''} aria-label="Quản lý kỳ kiểm kê">
     <div class="period-field">
       <label for="period">Kỳ kiểm kê</label>
       <select id="period">${db.periods.map(x => `<option value="${esc(x.id)}" ${x.id === period.id ? 'selected' : ''}>${x.year} · ${esc(x.facility)}</option>`).join('')}</select>
@@ -107,7 +110,7 @@ function render() {
   const summary = E.summary(p(), db);
   const navigationScroll = document.querySelector('.nav')?.scrollLeft ?? 0;
   const activeTab = document.activeElement?.closest('.nav button[data-tab]')?.dataset.tab;
-  const views = [dashboard, activities, calculations, reports, factors, backup, ipccPage, inventoryGuide];
+  const views = [dashboard, activities, calculations, reports, factors, backup, ipccPage, inventoryGuide, accountsPage];
   document.title = 'GreenLedger · ' + names[tab];
   parkOverviewModel();
   document.querySelector('#app').innerHTML = `<a class="skip-link" href="#main-content">Đến nội dung chính</a>
