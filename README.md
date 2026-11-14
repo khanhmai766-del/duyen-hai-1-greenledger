@@ -9,7 +9,7 @@ Dự án có hai bản dùng chung engine tính toán:
 | **Web** | [`GreenLedger-Web/`](GreenLedger-Web/) | Trình duyệt, phục vụ qua Cloudflare Worker | Hồ sơ trong trình duyệt (`localStorage`); tài khoản trên D1 |
 | **Desktop** | [`GreenLedger-Desktop/`](GreenLedger-Desktop/) | Windows x64 (WinForms + WebView2) | `%LOCALAPPDATA%\GreenLedger\du-lieu.json`, tài khoản trong `users.json` |
 
-> Kho riêng tư. Mã có số liệu kỳ 2025 của Duyên Hải 1, video nhà máy và mật khẩu quản trị mặc định. Không chuyển sang công khai trước khi rà các nội dung này.
+> Kho công khai. Mật khẩu `pxvh1` chỉ dùng cho lần đăng nhập đầu: đổi ngay sau khi cài, và đặt `GL_INITIAL_ADMIN_PASSWORD` cho bản Web chính thức. Không đưa mật khẩu thật, khóa phiên hay dữ liệu nội bộ chưa công bố vào kho. Bộ cài Windows có tại [Releases](https://github.com/khanhmai766-del/duyen-hai-1-greenledger/releases).
 
 ## Tính năng
 
