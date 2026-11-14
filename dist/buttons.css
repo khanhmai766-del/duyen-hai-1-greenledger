@@ -80,8 +80,43 @@
   .split-menu > button.danger { color: #a43d35; }
   .split-menu > button.danger:hover, .split-menu > button.danger:focus-visible { background: #fbeeec; }
 
+  /* Thanh công cụ trên cùng (Tệp, Tra cứu IPCC, Tải tài liệu IPCC): cùng chiều cao, cỡ chữ và đường giữa.
+     "Tra cứu IPCC" là <button> nên phải bỏ viền/bóng của kiểu nút chung; mũi tên vẽ bằng CSS thay ký tự "⌄". */
+  .web-toolbar { align-items: center; gap: 4px; }
+  .web-toolbar > details { display: flex; }
+  .web-toolbar summary, .web-toolbar > button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    box-shadow: none;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    list-style: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .web-toolbar summary::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    margin: -4px 0 0;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    color: inherit;
+    opacity: .65;
+    transform: rotate(45deg);
+    transition: transform .15s ease-out, margin .15s ease-out;
+  }
+  .web-toolbar details[open] > summary::after { margin-top: 3px; transform: rotate(-135deg); }
+
   @media (prefers-reduced-motion: reduce) {
-    button, .split-toggle svg { transition: none; }
+    button, .split-toggle svg, .web-toolbar summary::after { transition: none; }
   }
 }
 
