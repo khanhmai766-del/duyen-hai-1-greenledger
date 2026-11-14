@@ -18,8 +18,16 @@ const spotlightThemes = {
   dark: { color: '#ffffff', fill: 0.15, edge: 0.6 },
   // Panel nền trắng: dùng xanh chủ đạo, rất nhẹ để không lấn số liệu.
   light: { color: '#1f604c', fill: 0.07, edge: 0.45 },
+  // Thẻ kết quả ở trang Tính toán: màu theo phạm vi.
+  scope1: { color: '#1f8a5f', fill: 0.09, edge: 0.55 },
+  scope2: { color: '#2f73b5', fill: 0.09, edge: 0.55 },
 };
-const spotlightTargets = [['.ov-step, .ov-stat', 'dark'], ['.dashboard > .charts > .panel, .dashboard > .panel', 'light']];
+const spotlightTargets = [
+  ['.ov-step, .ov-stat', 'dark'],
+  ['.dashboard > .charts > .panel, .dashboard > .panel', 'light'],
+  ['.calculation-source-card.scope-1', 'scope1'],
+  ['.calculation-source-card.scope-2', 'scope2'],
+];
 const spotlightSize = 240;
 const spotlightProximity = 80;
 const spotlights = new Set();
@@ -208,16 +216,48 @@ function decorateToast(toast) {
   toast.classList.add('rb-toast');
 }
 
+/* ---------- 4. AnimatedContent: thẻ kết quả hiện lần lượt ---------- */
+// Chuyển từ Animations/AnimatedContent (trượt lên + hiện dần, xếp lần lượt). Chỉ chạy khi danh sách thẻ
+// thực sự đổi (đổi kỳ, lọc, sắp xếp, sang trang); mở/đóng chi tiết hay lưu dữ liệu giữ nguyên danh sách nên không chạy lại.
+let revealedCards = '';
+
+function revealCalculationCards() {
+  const cards = [...document.querySelectorAll('.calculation-source-card[data-row-id]')];
+  const signature = cards.map(card => card.dataset.rowId).join('|');
+  if (signature === revealedCards) return;
+  revealedCards = signature;
+  if (reactBits.reduced.matches) return;
+  const headings = [...document.querySelectorAll('.calculation-scope-heading')];
+  [...headings, ...cards].sort((a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1)
+    .slice(0, 14)
+    .forEach((element, i) => element.animate(
+      [{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 460, delay: i * 45, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards' }));
+}
+
 /* ---------- Gắn sau mỗi lần render ---------- */
 
+let mounting = false;
 function mountReactBits() {
+  if (mounting) return;
+  mounting = true;
   for (const [selector, theme] of spotlightTargets) {
     for (const root of document.querySelectorAll(selector)) if (!root.dataset.rbSpot) attachSpotlight(root, theme);
   }
   for (const element of document.querySelectorAll('[data-rotate-words]:not([data-rb-rotate])')) attachRotatingText(element);
+  if (document.querySelector('.calculation-source-list')) revealCalculationCards();
+  else revealedCards = '';
+  mounting = false;
 }
 
-new MutationObserver(mountReactBits).observe(document.querySelector('#app'), { childList: true });
+// subtree để bắt cả khi chỉ một phần trang đổi; gộp về tối đa một lần mỗi khung hình
+// (chữ chạy và số đếm trong hero cũng làm DOM đổi liên tục).
+let mountQueued = false;
+new MutationObserver(() => {
+  if (mountQueued) return;
+  mountQueued = true;
+  requestAnimationFrame(() => { mountQueued = false; mountReactBits(); });
+}).observe(document.querySelector('#app'), { childList: true, subtree: true });
 const toastElement = document.querySelector('#toast');
 if (toastElement) new MutationObserver(() => decorateToast(toastElement)).observe(toastElement, { childList: true });
 mountReactBits();

@@ -66,11 +66,13 @@ function calculations(summary, compact = false) {
     <div class="calculation-results">
       <div class="calculation-results-heading">
         <h2 id="calculation-result-count" aria-live="polite">${rows.length} nguồn phát thải</h2>
-        <div class="calculation-layout-switch" role="group" aria-label="Bố cục danh sách">${btn('Xem ngang', 'calc-layout', calculationView.layout === 'list' ? 'selected small' : 'small', 'id="calc-layout-list" data-layout="list" aria-pressed="' + (calculationView.layout === 'list') + '"')}${btn('Xem dọc', 'calc-layout', calculationView.layout === 'grid' ? 'selected small' : 'small', 'id="calc-layout-grid" data-layout="grid" aria-pressed="' + (calculationView.layout === 'grid') + '"')}</div>
+        <div class="calculation-results-toolbar">
+          <label for="calc-sort">Sắp xếp theo <select id="calc-sort">${sortOptions.map(([value, label]) => `<option value="${value}" ${calculationView.sort === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
+          <div class="calculation-layout-switch" role="group" aria-label="Bố cục danh sách">${btn('Xem ngang', 'calc-layout', calculationView.layout === 'list' ? 'selected small' : 'small', 'id="calc-layout-list" data-layout="list" aria-pressed="' + (calculationView.layout === 'list') + '"')}${btn('Xem dọc', 'calc-layout', calculationView.layout === 'grid' ? 'selected small' : 'small', 'id="calc-layout-grid" data-layout="grid" aria-pressed="' + (calculationView.layout === 'grid') + '"')}</div>
+        </div>
       </div>
-      <div class="calculation-results-toolbar"><label for="calc-sort">Sắp xếp theo <select id="calc-sort">${sortOptions.map(([value, label]) => `<option value="${value}" ${calculationView.sort === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><span class="sub">${rows.length ? start + 1 : 0}–${Math.min(start + calculationView.pageSize, rows.length)} / ${rows.length} nguồn</span></div>
       <div class="calculation-source-list ${calculationView.layout === 'grid' ? 'calculation-source-grid' : ''}">
-        ${visible.map(result => calculationCard(result, summary.rows.indexOf(result))).join('')}
+        ${calculationScopeCards(visible, rows, summary)}
       </div>
       ${!visible.length ? `<div class="panel empty"><h3>${summary.rows.length ? 'Không có nguồn phù hợp bộ lọc' : 'Chưa có nguồn phát thải'}</h3><p>${summary.rows.length ? 'Đổi từ khóa hoặc đặt lại bộ lọc để xem các nguồn trong kỳ.' : 'Thêm số liệu hoạt động để xem các bước tính.'}</p>${summary.rows.length ? btn('Đặt lại bộ lọc', 'calc-clear') : btn('Nhập số liệu', 'go-data', 'primary')}</div>` : ''}
       ${totalPages > 1 ? `<nav class="calculation-pagination" aria-label="Phân trang nguồn phát thải">${btn('Trang trước', 'calc-page', '', 'data-page="' + (calculationView.page - 1) + '" ' + (calculationView.page === 1 ? 'disabled' : ''))}<span>Trang ${calculationView.page} / ${totalPages}</span>${btn('Trang sau', 'calc-page', '', 'data-page="' + (calculationView.page + 1) + '" ' + (calculationView.page === totalPages ? 'disabled' : ''))}</nav>` : ''}
@@ -116,6 +118,30 @@ function calculationMethodDialog() {
   document.querySelector('#modal button[type="submit"]').textContent = 'Lưu thiết lập';
 }
 
+const calculationScopes = {
+  1: { title: 'Phạm vi 1', detail: 'Phát thải trực tiếp' },
+  2: { title: 'Phạm vi 2', detail: 'Gián tiếp · điện năng mua vào' },
+};
+
+// Khi xếp theo nhóm nguồn, chèn tiêu đề phạm vi trước nhóm thẻ đầu tiên của mỗi phạm vi.
+// Số nguồn và tổng tính trên mọi nguồn đang lọc, không chỉ trang hiện tại.
+function calculationScopeCards(visible, filtered, summary) {
+  let previous = null;
+  return visible.map(result => {
+    const scope = result.row.group === 7 ? 2 : 1;
+    let heading = '';
+    if (calculationView.sort === 'group' && scope !== previous) {
+      const members = filtered.filter(item => (item.row.group === 7 ? 2 : 1) === scope);
+      const total = members.reduce((sum, item) => sum + (item.error ? 0 : item.total), 0);
+      heading = `<div class="calculation-scope-heading scope-${scope}" role="presentation">
+        <strong>${calculationScopes[scope].title}</strong><span>${calculationScopes[scope].detail}</span>
+        <em>${members.length} nguồn · ${n(total, 2)} tCO₂e</em></div>`;
+    }
+    previous = scope;
+    return heading + calculationCard(result, summary.rows.indexOf(result));
+  }).join('');
+}
+
 function calculationCard(result, index) {
   const row = result.row;
   const expanded = calculationView.expandedId === row.id;
@@ -123,12 +149,12 @@ function calculationCard(result, index) {
   const relativeU = result.total ? result.U / result.total * 100 : 0;
   const detailId = 'calculation-detail-' + index;
   const amount = result.amount ?? (row.mode === 'monthly' ? row.months.reduce((sum, value) => sum + value, 0) : row.amount);
-  return `<article class="calculation-source-card ${expanded ? 'is-expanded' : ''}">
+  return `<article class="calculation-source-card scope-${scope} ${expanded ? 'is-expanded' : ''}" data-row-id="${esc(row.id)}">
     <div class="calculation-card-summary">
       <div class="calculation-scope-tile ${scope === 2 ? 'scope-two' : ''}"><span>Phạm vi</span><strong>${scope}</strong></div>
       <div class="calculation-card-info">
         <h3>${esc(row.name)}</h3>
-        <p class="calculation-card-meta"><span>${E.groups[row.group]}</span>${row.factor ? `<span class="calculation-factor">${esc(row.factor)}</span>` : ''}</p>
+        <p class="calculation-card-meta"><span class="calculation-scope-chip">${calculationScopes[scope].detail}</span><span>${E.groups[row.group]}</span>${row.factor ? `<span class="calculation-factor">${esc(row.factor)}</span>` : ''}</p>
         <dl class="calculation-card-input">
           <div><dt>Số liệu hoạt động</dt><dd>${n(amount, 2)} ${esc(unit(row))}</dd></div>
           <div><dt>u AD</dt><dd>${n(row.ad, 4)}%</dd></div>
