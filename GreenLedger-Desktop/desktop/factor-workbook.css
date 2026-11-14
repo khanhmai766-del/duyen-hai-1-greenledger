@@ -1,0 +1,19 @@
+.factor-workbook-toggle { display: flex; flex-wrap: wrap; gap: 6px; }
+.factor-workbook-toggle + input { min-width: min(100%, 240px); }
+.workbook-section { margin-top: 18px; }
+.workbook-section h3 { margin: 0 0 8px; font-size: 15px; }
+.workbook-factor { border: 1px solid var(--line); border-radius: 7px; margin: 6px 0; }
+.workbook-factor summary { padding: 12px 14px; cursor: pointer; line-height: 1.5; }
+.workbook-factor summary span { margin-inline-start: 10px; }
+.workbook-factor[open] summary { background: #f2f7f4; }
+.workbook-factor dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 205px), 1fr));
+  gap: 8px 14px;
+  margin: 0;
+  padding: 12px 14px 0;
+}
+.workbook-factor dl div { min-width: 0; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.workbook-factor dt { color: #516c61; font-size: 12px; }
+.workbook-factor dd { margin: 4px 0 0; overflow-wrap: anywhere; font-weight: 600; }
+.workbook-factor > .sub { margin: 12px 14px; }

@@ -1,0 +1,22 @@
+.period-strip[hidden] { display: none; }
+.ipcc-toolbar input { width: min(34vw, 350px); }
+.ipcc-library .activity-table td { padding-top: 11px; padding-bottom: 11px; }
+.ipcc-ncv th:nth-child(n+2):nth-child(-n+4), .ipcc-catalog td:nth-child(2) { white-space: nowrap; }
+.ipcc-catalog td:first-child { overflow-wrap: anywhere; }
+.ipcc-catalog td:nth-child(3) { min-width: 66px; }
+.ipcc-library .activity-table td:last-child button { white-space: nowrap; }
+.ipcc-page-links { display: flex; flex-wrap: wrap; gap: 5px; min-width: 115px; }
+.ipcc-reader { width: min(1040px, 95vw); max-width: none; max-height: 94vh; padding: 0; }
+.ipcc-reader-header, .ipcc-reader-tools { display: flex; align-items: center; gap: 8px; padding: 12px 18px; }
+.ipcc-reader-header { justify-content: space-between; border-bottom: 1px solid var(--line); }
+.ipcc-reader-header h2, .ipcc-reader-header p { margin: 0; }
+.ipcc-reader-header p { color: #526a61; font-size: 12px; overflow-wrap: anywhere; }
+.ipcc-reader-tools { flex-wrap: wrap; background: #f5f8fb; }
+.ipcc-reader-tools input { width: 74px; padding: 5px; }
+.ipcc-reader-tools button { padding: 6px 10px; }
+.ipcc-reader-status { color: #526a61; font-size: 12px; }
+.ipcc-reader-sheet { height: min(74vh, 820px); overflow: auto; background: #dce3e3; padding: 12px; }
+.ipcc-reader-sheet canvas { display: block; max-width: none; margin: 0 auto; background: white; }
+@media (max-width: 720px) {
+  .ipcc-toolbar input { width: min(56vw, 330px); }
+}
