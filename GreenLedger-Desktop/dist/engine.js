@@ -67,7 +67,8 @@ function sourceUncertainty(row, period, db, gases) {
     gwp('CH4_BIO',1);
   } else if (row.group === 3) {
     add('n','',Number(row.nU||0)/100,[2]);
-    other('EF_N',2);
+    if (row.effluentMethod) add('effluent', effluentTier1.id, row.effluentMethod.u / 100, [2]);
+    else other('EF_N',2);
     gwp('N2O',2);
     add('cod','',Number(row.codU||0)/100,[1]);
     other('BO_IND',1);
@@ -115,11 +116,11 @@ const fuels=data.map((x,i)=>({id:x[0],name:x[1],unit:x[2],density:x[3],ncv:x[4],
 const gases=[['CO2','Carbon dioxide',1,1,1,0],['CH4_FOSSIL','Methane hóa thạch',25,30,29.8,5.5],['CH4_BIO','Methane sinh học',25,28,27,5.5],['N2O','Nitrous oxide',298,265,273,65],['HFC_32','R-32',675,677,771,146],['HFC_125','R-125',3500,3170,3740,286.18],['HCFC_22','R-22',1810,1760,1960,104.08],['HFC_134A','R-134a',1430,1300,1530,290.5],['HFC_143A','R-143a',4470,4800,5810,700.95],['HFC_227EA','FM-200',3220,3350,3600,193.13],['R410A','R-410A',2087.5,1923.5,2255.5,321.27,[['HFC_32',.5],['HFC_125',.5]]],['R404A','R-404A',3921.6,3942.8,4728,386.4,[['HFC_125',.44],['HFC_143A',.52],['HFC_134A',.04]]],['R407C','R-407C',1773.85,1624.21,1907.93,170.12,[['HFC_32',.23],['HFC_125',.25],['HFC_134A',.52]]]].map(x=>({id:x[0],name:x[1],ar4:x[2],ar5:x[3],ar6:x[4],u:x[5],mix:x[6]||[],source:'IPCC AR6 WGI Ch.7 Table 7.15 (tr.95); SM Table 7.SM.7; hỗn hợp: IPCC 2006 V3 Ch.7 Table 7.8 (tr.44). Giá trị khởi tạo theo file yêu cầu.'}));
 const other=[['BOD','BOD sinh hoạt',40,15,'g/người/ngày','IPCC V5 Ch.6 Table 6.4 tr.14; Table 6.7 tr.17'],['BO_DOM','Bo sinh hoạt',.6,15,'kg CH₄/kg BOD','IPCC V5 Ch.6 Table 6.2 tr.12'],['MCF_SEPTIC','MCF bể tự hoại',.5,5,'tỷ lệ','IPCC V5 Ch.6 Table 6.3 tr.13'],['MCF_AERO','MCF hiếu khí tốt',0,0,'tỷ lệ','IPCC V5 Ch.6 Table 6.3 tr.13'],['MCF_OVER','MCF hiếu khí quá tải',.3,15,'tỷ lệ','IPCC V5 Ch.6 Table 6.3 tr.13'],['MCF_ANA','MCF kỵ khí',.8,5,'tỷ lệ','IPCC V5 Ch.6 Table 6.3 tr.13'],['PERSON','Nhân sự',1,2.5,'tỷ lệ','IPCC V5 Ch.6 Table 6.7 tr.17'],['EF_N','EF xả thải N₂O-N',.005,0,'kg/kg N','IPCC V5 Ch.6 Table 6.11 tr.27; chưa có u'],['BO_IND','Bo công nghiệp',.25,0,'kg CH₄/kg COD','IPCC V5 Ch.6 §6.2.3.2; chưa có u'],['UREA','EF Urê',.2,0,'tấn C/tấn','IPCC 2006 V4 Ch.11 Eq.11.13 và §11.4.4: u EF mặc định bằng 0 theo giả định Tier 1 toàn bộ C trong urê phát thải.'],['LIME','EF đá vôi',.12,0,'tấn C/tấn','IPCC V4 Ch.11 Eq.11.12 tr.27; chưa có u']].map(x=>({id:x[0],name:x[1],value:x[2],u:x[3],unit:x[4],source:x[5]}));
 return {schema:1,fuels,gases,other,grid:[2021,2022,2023,2024].map((year,i)=>({id:'GRID_'+year,year,value:[.7221,.6766,.6592,.6187][i],source:'Cục Biến đổi khí hậu; theo file yêu cầu, cần đối chiếu công bố năm'})),periods:[{id:uid(),year:2024,facility:'Cơ sở sản xuất mẫu',address:'',contact:'',boundary:'Kiểm soát vận hành; Phạm vi 1 và 2',notes:'Dữ liệu minh họa để kiểm chứng; thay bằng số liệu thực tế.',gwp:'ar6',weighted:true,rows:[{id:uid(),name:'Lò hơi · Dầu DO',group:0,factor:'DO_STAT',amount:50000,mode:'annual',months:Array(12).fill(0),ad:.5/Math.sqrt(3),device:'Trụ bơm nhiên liệu',evidence:'Sổ theo dõi nhiên liệu',nitrogen:.02,cod:.1,mcf:'MCF_SEPTIC'}]}]};}
-function calculate(row,p,db){const a=row.mode==='monthly'?row.months.reduce((s,v)=>s+Number(v),0):row.group===5&&row.factor==='CO2'&&row.pcccInput==='cylinders'?Number(row.pcccCount)*Number(row.pcccKg):Number(row.amount);let gases=[0,0,0,0],bio=0,steps=[],warnings=[],source='';
+function calculate(row,p,db){if(row.group!==3&&row.effluentMethod!==undefined)industrialEffluentFactor(row,db);const a=row.mode==='monthly'?row.months.reduce((s,v)=>s+Number(v),0):row.group===5&&row.factor==='CO2'&&row.pcccInput==='cylinders'?Number(row.pcccCount)*Number(row.pcccKg):Number(row.amount);let gases=[0,0,0,0],bio=0,steps=[],warnings=[],source='';
 const gas=id=>{let g=db.gases.find(x=>x.id===id);if(!g)throw Error('Thiếu khí '+id);return g};const gw=id=>gas(id)[p.gwp];const f=id=>{let x=db.other.find(x=>x.id===id);if(!x)throw Error('Thiếu hệ số '+id);return x};const value=id=>f(id).value,ru=id=>f(id).u/100;
 if(row.group<2){let t=db.fuels.find(f=>f.id===row.factor);if(!t)throw Error('Thiếu nhiên liệu');let kg=a*t.density,gg=kg*1e-6,tj=gg*t.ncv[0],ch=t.bio?'CH4_BIO':'CH4_FOSSIL';gases=[tj*t.co2[0]/1000,tj*t.ch4[0]*gw(ch)/1000,tj*t.n2o[0]*gw('N2O')/1000,0];if(t.bio){bio=gases[0];gases[0]=0;}steps=[['Khối lượng (kg)',kg],['Khối lượng (Gg)',gg],['Nhiệt lượng (TJ)',tj],['KLR (kg/ĐVT)',t.density],['NCV (TJ/Gg)',t.ncv[0]],['CO₂ gốc (kg)',tj*t.co2[0]],['CH₄ gốc (kg)',tj*t.ch4[0]],['N₂O gốc (kg)',tj*t.n2o[0]],['u NCV (%)',rel(t.ncv)*100],['u EF CO₂ (%)',rel(t.co2)*100],['u EF CH₄ (%)',rel(t.ch4)*100],['u EF N₂O (%)',rel(t.n2o)*100]];source=t.source;
 }else if(row.group===2){let tow=a/24*value('BOD')*.001,ef=value('BO_DOM')*value(row.mcf);gases[1]=tow*ef*gw('CH4_BIO')/1000;steps=[['TOW (kg BOD)',tow],['EF (kg CH₄/kg BOD)',ef]];source=f('BOD').source+'; '+f(row.mcf).source;
-}else if(row.group===3){let n=a*Number(row.nitrogen),cod=a*Number(row.cod);gases[2]=n*value('EF_N')*44/28*gw('N2O')/1000;if(row.includeCH4){gases[1]=cod*value('BO_IND')*value(row.mcf)*gw('CH4_BIO')/1000;}steps=[['N xả thải (kg N)',n],['COD (kg)',cod]];source=f('EF_N').source;if(a>0){warnings.push('N₂O ở dòng này tính cho nước xả ra nguồn tiếp nhận theo thể tích xả × nồng độ N đầu ra; cần đánh giá riêng N₂O trong công đoạn xử lý nếu thuộc ranh giới kiểm kê.');if(!ru('EF_N'))warnings.push('Chưa có u EF N₂O xả thải; tạm dùng 0. Bổ sung trong Thư viện hệ số nếu có dữ liệu.');if(row.includeCH4&&!ru('BO_IND'))warnings.push('Chưa có u Bo công nghiệp; tạm dùng 0 cho CH₄.');}
+}else if(row.group===3){let n=a*Number(row.nitrogen),cod=a*Number(row.cod);const ef=industrialEffluentFactor(row,db);if(!ef)throw Error('Thiếu hệ số EF_N');gases[2]=n*ef.value*44/28*gw('N2O')/1000;if(row.includeCH4){gases[1]=cod*value('BO_IND')*value(row.mcf)*gw('CH4_BIO')/1000;}steps=[['N xả thải (kg N)',n],['COD (kg)',cod]];source=ef.source+(row.effluentMethod?' · u EF '+ef.u+'% · Căn cứ: '+row.effluentMethod.basis:'');if(a>0){warnings.push('N₂O ở dòng này tính cho nước xả ra nguồn tiếp nhận theo thể tích xả × nồng độ N đầu ra; cần đánh giá riêng N₂O trong công đoạn xử lý nếu thuộc ranh giới kiểm kê.');if(!row.effluentMethod&&!ef.u)warnings.push('Chưa có u EF N₂O xả thải; tạm dùng 0. Bổ sung trong Thư viện hệ số nếu có dữ liệu.');if(row.includeCH4&&!ru('BO_IND'))warnings.push('Chưa có u Bo công nghiệp; tạm dùng 0 cho CH₄.');}
 }else if(row.group===4||row.group===5){let g=gas(row.factor),gwp=g[p.gwp],ug=g.u;if(g.mix.length){gwp=g.mix.reduce((s,[id,w])=>s+w*gw(id),0);ug=rss(g.mix.map(([id,w])=>gas(id).u*(p.weighted?w:1)));}const gasIndex=g.id==='CO2'?0:3;gases[gasIndex]=a*gwp/1000;if(a>0&&g.mix.length&&!p.weighted)warnings.push('u GWP hỗn hợp đang cộng theo chế độ không trọng số để đối chiếu Excel cũ.');steps=[['GWP-100',gwp],['u GWP',ug]];source=g.source;if(g.id==='HCFC_22')warnings.push('HCFC-22 thuộc Nghị định thư Montreal; rà soát phạm vi và tách riêng nếu quy định yêu cầu.');
 }else if(row.group===6){let id=row.factor==='LIME'?'LIME':'UREA';gases[0]=a*value(id)*44/12;source=f(id).source;if(a>0&&id==='UREA'&&f(id).u===25&&source.includes('giả định u=25% từ biên 50%'))warnings.push('Kỳ này dùng u EF urê 25% từ thư viện cũ. Nếu áp dụng EF mặc định Tier 1, hãy rà soát và cập nhật u EF trong Thư viện hệ số.');steps=[['EF (tấn C/tấn)',value(id)],['Hệ số CO₂/C',44/12]];
 }else {let g=db.grid.find(g=>g.id===row.factor);if(!g)throw Error('Thiếu hệ số điện');gases[0]=a/1000*g.value;source=g.source;steps=[['Điện năng (MWh)',a/1000],['EF điện (tCO₂/MWh)',g.value],['SD chuỗi EF',sd(gridSeries(p,db).map(g=>g.value))]];if(g.year!==Number(p.year))warnings.push('Dùng EF điện '+g.year+' cho kỳ '+p.year+'.');}
@@ -145,7 +146,7 @@ function sharedInputs(results, db) {
     if (row.group === 6) factor(row.factor === 'LIME' ? 'LIME' : 'UREA');
     if (row.group === 2 && gases[1] > 0) ['BOD', 'BO_DOM', 'PERSON', row.mcf].forEach(factor);
     if (row.group === 3) {
-      if (gases[2] > 0) factor('EF_N');
+      if (gases[2] > 0) factor(row.effluentMethod?.id ?? 'EF_N');
       if (gases[1] > 0) ['BO_IND', row.mcf].forEach(factor);
     }
     if (gases[1] > 0) {
@@ -164,5 +165,39 @@ function sharedInputs(results, db) {
   return [...inputs.values()].filter(item => item.rows.size > 1)
     .map(({ kind, label, rows }) => ({ kind, label, rows: [...rows.values()] }));
 }
-return {seed,calculate,summary,validate,groups,uid,rss,sd,sharedInputs,coverage,gridSeries,combineUncertainty,assessReliability,reliabilitySummary};})();
+// This identifier fixes the coefficient for existing backups. A revision gets a new identifier.
+const effluentTier1 = Object.freeze({
+  id: 'IPCC2019-2023-EFFLUENT-N2O-T1',
+  value: 0.0052, // kg N₂O-N/kg N
+  source: 'IPCC 2019 · Tập 5, Ch. 6, PT 6.12 và Bảng 6.8A · bản đính chính 07/2023',
+});
+
+function industrialEffluentFactor(row, db) {
+  const method = row.effluentMethod;
+  if (method === undefined) return db.other.find(item => item.id === 'EF_N');
+  if (row.group !== 3 || method?.id !== effluentTier1.id ||
+      !Number.isFinite(method.u) || method.u < 0 ||
+      typeof method.basis !== 'string' || !method.basis.trim() || method.basis.length > 500) {
+    throw Error('Phương pháp hoặc căn cứ độ không đảm bảo N₂O đầu xả không hợp lệ.');
+  }
+  return { ...effluentTier1, u: method.u };
+}
+
+function previewIndustrialEffluentN2O({ volume, nitrogen }, period, db, row = {}) {
+  if (![volume, nitrogen].every(value => Number.isFinite(value) && value >= 0)) {
+    throw Error('Nhập thể tích xả và nồng độ tổng N hợp lệ.');
+  }
+  const currentFactor = industrialEffluentFactor(row, db)?.value;
+  const gwp = db.gases.find(item => item.id === 'N2O')?.[period.gwp];
+  if (!Number.isFinite(currentFactor) || currentFactor < 0 || !Number.isFinite(gwp) || gwp <= 0) {
+    throw Error('Kỳ này thiếu hệ số N₂O đầu xả hoặc GWP của N₂O.');
+  }
+  const candidateFactor = effluentTier1.value;
+  const load = volume * nitrogen; // kg N
+  const current = load * currentFactor * 44 / 28 * gwp / 1000;
+  const candidate = load * candidateFactor * 44 / 28 * gwp / 1000;
+  if (![load, current, candidate].every(Number.isFinite)) throw Error('Giá trị đầu vào quá lớn.');
+  return { load, gwp, currentFactor, candidateFactor, current, candidate, delta: candidate - current };
+}
+return {seed,calculate,effluentTier1,industrialEffluentFactor,previewIndustrialEffluentN2O,summary,validate,groups,uid,rss,sd,sharedInputs,coverage,gridSeries,combineUncertainty,assessReliability,reliabilitySummary};})();
 if(typeof module!=='undefined')module.exports=Engine;

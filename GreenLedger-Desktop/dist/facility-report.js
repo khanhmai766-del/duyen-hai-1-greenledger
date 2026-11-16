@@ -139,6 +139,9 @@ function facilityReport(summary) {
       'NCV ' + number(item.ncv[0]) + ' TJ/Gg · EF CO₂ / CH₄ / N₂O: ' + [item.co2, item.ch4, item.n2o].map(values => number(values[0])).join(' / ') + ' kg/TJ', item.source]),
     ...db.grid.filter(item => usedGrid.has(item.id)).map(item => ['Điện lưới ' + item.year, item.id, number(item.value) + ' tCO₂e/MWh', item.source]),
     ...db.other.filter(item => usedOther.has(item.id)).map(item => [item.name, item.id, number(item.value) + ' ' + item.unit, item.source]),
+    ...(terms.some(term => term.kind === 'effluent') ? [[
+      'EF N₂O đầu xả công nghiệp', E.effluentTier1.id, number(E.effluentTier1.value) + ' kg N₂O-N/kg N', E.effluentTier1.source,
+    ]] : []),
     ...db.gases.filter(item => usedGas.has(item.id)).map(item => {
       const gwp = item.mix.length ? item.mix.reduce((total, [id, weight]) => total + weight * (db.gases.find(gas => gas.id === id)?.[period.gwp] || 0), 0) : item[period.gwp];
       return [item.name, item.id, 'GWP-100 ' + number(gwp), item.source];
@@ -176,7 +179,7 @@ function facilityReport(summary) {
       <h3>1. Phương pháp, thu thập số liệu và hệ số phát thải</h3>
       <p>Tính theo số liệu hoạt động và hệ số theo từng nguồn. Quy đổi theo GWP-100 ${esc(period.gwp.toUpperCase())}. Nguồn hệ số và chứng từ được liệt kê theo dòng nguồn.</p>
       <h3>2. Số liệu hoạt động</h3>
-      ${facilityTable('Số liệu hoạt động và chứng từ', ['Dòng nguồn','Phạm vi','Nhóm','Số liệu','ĐVT','Chứng từ','Nguồn hệ số'], sourceRows)}
+      ${facilityTable('Số liệu hoạt động và chứng từ', ['Dòng nguồn','Phạm vi','Nhóm','Số liệu','ĐVT','Minh chứng dữ liệu','Nguồn hệ số'], sourceRows)}
       <h3>3. Kết quả kiểm kê</h3>
       ${facilityTable('Phát thải và ĐKĐBĐ theo phạm vi, nhóm nguồn (tCO₂e)', ['Phạm vi / nhóm','CO₂','CH₄','N₂O','Môi chất','Tổng','Tỷ lệ','U (±)','U (%)'],
         [...aggregateRows, resultRow('Tổng kiểm kê', summary.rows.filter(result => !result.error))])}

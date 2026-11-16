@@ -66,6 +66,7 @@ function calculations(summary, compact = false) {
     <div class="calculation-results">
       <div class="calculation-results-heading">
         <h2 id="calculation-result-count" aria-live="polite">Kỳ ${p().year} · tìm thấy ${rows.length} nguồn</h2>
+        ${btn('So sánh IPCC 2019', 'calc-effluent-preview', 'small', 'aria-haspopup="dialog"')}
         <div class="calculation-layout-switch" role="group" aria-label="Bố cục danh sách">${btn('Xem ngang', 'calc-layout', calculationView.layout === 'list' ? 'selected small' : 'small', 'data-layout="list" aria-pressed="' + (calculationView.layout === 'list') + '"')}${btn('Xem dọc', 'calc-layout', calculationView.layout === 'grid' ? 'selected small' : 'small', 'data-layout="grid" aria-pressed="' + (calculationView.layout === 'grid') + '"')}</div>
       </div>
       <div class="calculation-results-toolbar"><label for="calc-sort">Sắp xếp theo <select id="calc-sort">${sortOptions.map(([value, label]) => `<option value="${value}" ${calculationView.sort === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><span class="sub">${rows.length ? start + 1 : 0}–${Math.min(start + calculationView.pageSize, rows.length)} / ${rows.length} nguồn</span></div>
@@ -76,6 +77,102 @@ function calculations(summary, compact = false) {
       ${totalPages > 1 ? `<nav class="calculation-pagination" aria-label="Phân trang nguồn phát thải">${btn('Trang trước', 'calc-page', '', 'data-page="' + (calculationView.page - 1) + '" ' + (calculationView.page === 1 ? 'disabled' : ''))}<span>Trang ${calculationView.page} / ${totalPages}</span>${btn('Trang sau', 'calc-page', '', 'data-page="' + (calculationView.page + 1) + '" ' + (calculationView.page === totalPages ? 'disabled' : ''))}</nav>` : ''}
     </div>
   </section>`;
+}
+
+function effluentPreviewDialog() {
+  const period = p();
+  const sources = period.rows.filter(row => row.group === 3);
+  const options = [['', 'Nhập số liệu để tính thử'], ...sources.map(row => [row.id, row.name])];
+  const canSave = accountCan('data');
+  modal('So sánh N₂O đầu xả · IPCC 2019', `
+    <p class="sub">Thí điểm cho nước thải công nghiệp xả vào nguồn nước theo Tier 1. Kết quả xem trước dùng GWP của kỳ ${esc(period.year)}.</p>
+    <div class="form-grid">
+      ${sources.length ? `<div class="span2">${selectField('Nguồn nước thải công nghiệp', 'source', options, '')}</div>` : ''}
+      ${field('Thể tích xả trong kỳ (m³)', 'volume', '', 'number', 'required min="0" step="any"')}
+      ${field('Tổng N tại điểm xả (kg N/m³)', 'nitrogen', '', 'number', 'required min="0" step="any"')}
+    </div>
+    <p class="sub">Nhập tổng N và thể tích tại cùng điểm xả, cùng kỳ. Chia số đo mg N/L cho 1.000 để đổi sang kg N/m³.</p>
+    <label class="check-row"><input type="checkbox" name="eligible" required> Đã xác định điểm xả vào nguồn nước và điều kiện áp dụng Tier 1.</label>
+    <div id="effluent-preview-result" aria-live="polite"></div>
+    ${canSave ? '<button type="button" data-effluent-reset hidden>Dùng lại hệ số thư viện</button>' : ''}
+    <p class="source-text">Phạm vi tính thử chỉ gồm N₂O sau xả. <a href="https://www.ipcc-nggip.iges.or.jp/public/2019rf/pdf/5_Volume5/19R_V5_6_Ch06_Wastewater.pdf#page=39" target="_blank" rel="noopener noreferrer">IPCC 2019 · Tập 5, Chương 6, Bảng 6.8A</a></p>`, data => {
+    const source = selectedSource();
+    if (!data.get('volume')?.trim() || !data.get('nitrogen')?.trim()) throw Error('Cần đủ thể tích xả và tổng N tại điểm xả.');
+    const result = E.previewIndustrialEffluentN2O({
+      volume: Number(data.get('volume')), nitrogen: Number(data.get('nitrogen')),
+    }, period, db, source);
+    output.innerHTML = `<div class="calc-grid">
+      <div class="calc-item">Theo hệ số của kỳ<strong>${n(result.current, 4)}</strong>tCO₂e</div>
+      <div class="calc-item">IPCC 2019 · Tier 1<strong>${n(result.candidate, 4)}</strong>tCO₂e</div>
+      <div class="calc-item">Chênh lệch<strong>${result.delta > 0 ? '+' : ''}${n(result.delta, 4)}</strong>tCO₂e</div>
+    </div>
+    <p class="sub">Tải N ${n(result.load, 4)} kg · GWP N₂O ${n(result.gwp, 0)} · EF ${n(result.currentFactor, 6)} → ${n(result.candidateFactor, 6)} kg N₂O-N/kg N</p>
+    ${source && canSave ? `<fieldset class="source-review">
+      <legend>Lưu phương pháp cho nguồn đang chọn</legend>
+      <div class="form-grid">
+        ${field('u chuẩn của hệ số EF (%)', 'effluentU', source.effluentMethod?.u, 'number', 'min="0" step="any" placeholder="Nhập giá trị có căn cứ"')}
+        ${field('Căn cứ chọn u EF', 'effluentBasis', source.effluentMethod?.basis, 'text', 'maxlength="500"')}
+      </div>
+      <p class="sub">Nhập độ không đảm bảo chuẩn tương đối và căn cứ. Nguồn sẽ dùng hệ số IPCC 2019 trong báo cáo của kỳ.</p>
+      <button type="button" class="primary" data-effluent-apply>Áp dụng cho nguồn này</button>
+    </fieldset>` : ''}`;
+    return false;
+  }, true);
+  const form = document.querySelector('#modal-form');
+  const output = form.querySelector('#effluent-preview-result');
+  const submit = form.querySelector('[type="submit"]');
+  const error = form.querySelector('#form-error');
+  const reset = form.querySelector('[data-effluent-reset]');
+  const selectedSource = () => sources.find(row => row.id === form.elements.source?.value);
+  submit.textContent = 'Tính đối chiếu';
+  form.querySelector('.modal-foot [data-action="close"]').textContent = 'Đóng';
+  form.elements.source?.addEventListener('change', () => {
+    const source = selectedSource();
+    form.elements.volume.value = source?.mode === 'monthly'
+      ? source.months.reduce((sum, amount) => sum + Number(amount), 0) : source?.amount ?? '';
+    form.elements.nitrogen.value = source?.nitrogen ?? '';
+    form.elements.volume.readOnly = Boolean(source);
+    form.elements.nitrogen.readOnly = Boolean(source);
+    form.elements.eligible.checked = false;
+    if (reset) reset.hidden = !source?.effluentMethod;
+    output.replaceChildren();
+    error.textContent = '';
+  });
+  form.addEventListener('input', event => {
+    error.textContent = '';
+    if (output.contains(event.target)) return;
+    output.replaceChildren();
+  });
+  form.addEventListener('click', async event => {
+    const button = event.target.closest('[data-effluent-apply], [data-effluent-reset]');
+    if (!button || submit.disabled || !accountCan('data')) return;
+    const source = selectedSource();
+    if (!source) return;
+    const applying = button.hasAttribute('data-effluent-apply');
+    const method = applying ? {
+      id: E.effluentTier1.id,
+      u: form.elements.effluentU.valueAsNumber,
+      basis: form.elements.effluentBasis.value.trim(),
+    } : undefined;
+    submit.disabled = button.disabled = true;
+    try {
+      if (applying) E.industrialEffluentFactor({ ...source, effluentMethod: method }, db);
+      const saved = await change(next => {
+        const row = next.periods.find(item => item.id === period.id)?.rows.find(item => item.id === source.id);
+        if (!row || row.group !== 3 || JSON.stringify(row) !== JSON.stringify(source)) {
+          throw Error('Nguồn đã thay đổi. Mở lại hộp thoại để tính đối chiếu.');
+        }
+        if (applying) row.effluentMethod = method;
+        else delete row.effluentMethod;
+      }, applying ? 'Đã lưu phương pháp IPCC 2019 cho nguồn' : 'Đã dùng lại hệ số thư viện cho nguồn');
+      if (saved && form.isConnected) form.closest('dialog').close();
+      else if (!saved) error.textContent = 'Chưa lưu được phương pháp. Kiểm tra thông báo lưu dữ liệu.';
+    } catch (err) {
+      error.textContent = err.message;
+    } finally {
+      submit.disabled = button.disabled = false;
+    }
+  });
 }
 
 function calculationMethodDialog() {
@@ -179,7 +276,7 @@ function calculationFormulas(result) {
     add('CH₄', 'Tải lượng hữu cơ × EF × GWP‑100 ÷ 1.000', `${number(tow)} × ${number(ef)} × ${number(gwp('CH4_BIO'))} ÷ 1.000 ≈ ${number(result.gases[1])} tCO₂e`);
   } else if (row.group === 3) {
     add('N₂O', 'Thể tích (m³) × tổng N (kg/m³) × EF × 44/28 × GWP‑100 ÷ 1.000',
-      `${number(amount)} × ${number(row.nitrogen)} × ${number(parameter('EF_N'))} × 44/28 × ${number(gwp('N2O'))} ÷ 1.000 ≈ ${number(result.gases[2])} tCO₂e`);
+      `${number(amount)} × ${number(row.nitrogen)} × ${number(E.industrialEffluentFactor(row, db).value)} × 44/28 × ${number(gwp('N2O'))} ÷ 1.000 ≈ ${number(result.gases[2])} tCO₂e`);
     if (row.includeCH4) {
       add('CH₄', 'Thể tích (m³) × COD (kg/m³) × B₀ × MCF × GWP‑100 ÷ 1.000',
         `${number(amount)} × ${number(row.cod)} × ${number(parameter('BO_IND'))} × ${number(parameter(row.mcf))} × ${number(gwp('CH4_BIO'))} ÷ 1.000 ≈ ${number(result.gases[1])} tCO₂e`);
@@ -282,6 +379,7 @@ document.addEventListener('click', event => {
   if (!button) return;
   switch (button.dataset.action) {
     case 'calc-method': calculationMethodDialog(); return;
+    case 'calc-effluent-preview': effluentPreviewDialog(); return;
     case 'calc-clear':
       Object.assign(calculationView, { query: '', scope: 'all', groups: new Set(), warningsOnly: false, page: 1 });
       break;

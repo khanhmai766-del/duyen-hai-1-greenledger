@@ -14,7 +14,7 @@
     grid-template-rows: auto minmax(40px, 1fr) auto auto;
     grid-template-areas: 'copy .' '. .' 'steps stat' 'foot foot';
     gap: 22px 28px;
-    /* Hero phủ hết vùng nội dung (bên phải thanh điều hướng) và nằm dưới thanh trên trong suốt. */
+    /* Hero phủ hết vùng nội dung bên phải thanh điều hướng và nằm dưới thanh trên. */
     min-height: max(640px, min(100svh, 980px));
     margin-bottom: 26px;
     padding: calc(var(--ov-topbar, 62px) + clamp(24px, 3.4vw, 48px)) var(--ov-pad) 18px;
@@ -32,13 +32,13 @@
     margin-inline: max(clamp(18px, 3vw, 40px), (100% - 1524px) / 2);
   }
 
-  /* Thanh trên nằm đè lên hero, nền trong suốt, chữ sáng. */
+  /* Giữ tương phản cho chữ sáng khi video hoặc mô hình có nền sáng. */
   .main:has(.ov-hero) { position: relative; }
   .main:has(.ov-hero) > .topbar {
     position: absolute;
     inset: 0 0 auto;
     z-index: 6;
-    background: transparent;
+    background: #102a26d9;
     border-bottom-color: #ffffff1f;
     color: #e8efe9;
   }

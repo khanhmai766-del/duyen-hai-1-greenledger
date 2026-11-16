@@ -50,7 +50,7 @@ function createExcelModel(db, period, engine) {
   row(components, 4, ['Nguồn', 'Nhóm', 'Thành phần', 'Mã ghép', 'u đóng góp', null, 'Mã ghép', 'u toàn cơ sở', 'Nhóm', 'Mã ghép', 'u theo nhóm', 'Bình phương']);
   components.headers.push(4);
   const termKeys = new Map(), groupKeys = new Map();
-  const termLabels = { ad: 'Số liệu hoạt động', n: 'Nồng độ N', cod: 'COD', other: 'Hệ số / thông số',
+  const termLabels = { ad: 'Số liệu hoạt động', n: 'Nồng độ N', cod: 'COD', effluent: 'u hệ số N₂O đầu xả', other: 'Hệ số / thông số',
     gwp: 'GWP', blend: 'GWP thành phần', grid: 'EF điện', ncv: 'Nhiệt trị NCV',
     co2: 'EF CO₂', ch4: 'EF CH₄', n2o: 'EF N₂O' };
   let termLine = 5;
@@ -148,6 +148,7 @@ function createExcelModel(db, period, engine) {
     if (term.kind === 'ad') return ref('Tinh toan', ad);
     if (term.kind === 'n' || term.kind === 'cod') return ref('Hoat dong', (term.kind === 'n' ? 'Z' : 'AA') + a);
     if (term.kind === 'other') return term.id === 'PERSON' ? `IF(${ref('Hoat dong','AF' + a)}=1,${ou(term.id)},0)` : ou(term.id);
+    if (term.kind === 'effluent') return ref('Tinh toan', B(8));
     if (term.kind === 'gwp') return gu(term.id);
     if (term.kind === 'blend') return `IF(${ref('Tinh toan',B(3))}=0,0,${f('F',gr[term.id])}*IF(${f('B',5)}=1,${term.weight},1)/${ref('Tinh toan',B(3))})`;
     if (term.kind === 'grid') return `IF(${f('C',grid[source.factor])}=0,0,${f('B',12)}/${f('C',grid[source.factor])})`;
@@ -218,12 +219,20 @@ function createExcelModel(db, period, engine) {
       metric(5, 'COD', source.cod, ref('Hoat dong', 'Y' + a), 'kg COD/m³');
       metric(6, 'Tổng COD', result.amount * source.cod, `${B(1)}*${B(5)}`, 'kg COD');
       metric(7, 'MCF', db.other.find(x => x.id === source.mcf)?.value ?? 0, source.mcf ? ov(source.mcf) : '0');
-      raw[2] = result.amount * source.nitrogen * db.other.find(x => x.id === 'EF_N').value * 44 / 28;
-      rawFormula[2] = `${B(4)}*${ov('EF_N')}*${f('B', 11)}`;
+      const effluent = engine.industrialEffluentFactor(source, db);
+      const effluentEF = source.effluentMethod ? B(20) : ov('EF_N');
+      const effluentU = source.effluentMethod ? B(8) : ou('EF_N');
+      if (source.effluentMethod) {
+        metric(8, 'u EF N₂O đầu xả', effluent.u / 100, null);
+        calc.cells[calc.cells.length - 1].numberFormat = percent;
+        metric(20, 'EF N₂O đầu xả · IPCC 2019', effluent.value, null, 'kg N₂O-N/kg N');
+      }
+      raw[2] = result.amount * source.nitrogen * effluent.value * 44 / 28;
+      rawFormula[2] = `${B(4)}*${effluentEF}*${f('B', 11)}`;
       raw[1] = source.includeCH4 ? result.amount * source.cod * db.other.find(x => x.id === 'BO_IND').value * db.other.find(x => x.id === source.mcf).value : 0;
       rawFormula[1] = `IF(${ref('Hoat dong', 'AC' + a)}=1,${B(6)}*${ov('BO_IND')}*${B(7)},0)`;
       for (const [i, id] of [[1, 'CH4_BIO'], [2, 'N2O']]) { gwp[i] = db.gases.find(g => g.id === id)[period.gwp]; gwpFormula[i] = gw(id); }
-      uFormula[2] = `SQRT(${ad}^2+${ref('Hoat dong', 'Z' + a)}^2+${ou('EF_N')}^2+${gu('N2O')}^2)`;
+      uFormula[2] = `SQRT(${ad}^2+${ref('Hoat dong', 'Z' + a)}^2+${effluentU}^2+${gu('N2O')}^2)`;
       uFormula[1] = `IF(${ref('Hoat dong', 'AC' + a)}=1,SQRT(${ad}^2+${ref('Hoat dong', 'AA' + a)}^2+${ou('BO_IND')}^2+${source.mcf ? ou(source.mcf) : 0}^2+${gu('CH4_BIO')}^2),0)`;
     } else if ([4, 5].includes(source.group)) {
       const g = gr[source.factor];
