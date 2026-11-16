@@ -80,7 +80,7 @@ internal static class Setup
         using (var key = Registry.CurrentUser.CreateSubKey(RegistryPath))
         {
             key.SetValue("DisplayName", "GreenLedger · Duyên Hải 1");
-            key.SetValue("DisplayVersion", "1.24.0");
+            key.SetValue("DisplayVersion", "1.24.1");
             key.SetValue("Publisher", "GreenLedger");
             key.SetValue("Language", 1066, RegistryValueKind.DWord);
             key.SetValue("DisplayIcon", AppPath);

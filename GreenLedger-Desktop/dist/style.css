@@ -19,7 +19,10 @@
 .gas-amounts dd{margin:0;font-size:14px;font-weight:650;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 #period-comparison .panel-head{align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:0}
 #period-comparison .panel-head h2{margin:0}
+.comparison-heading{align-self:stretch;display:flex;flex-direction:column;justify-content:space-between;gap:6px}
+.comparison-heading .comparison-cycle{margin-block-end:12px}
 .comparison-settings{display:flex;gap:12px;flex-wrap:wrap;margin-inline-start:auto}
+@media(max-width:600px){.comparison-heading .comparison-cycle{margin-block-end:0}}
 .comparison-result{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-top:12px}
 .comparison-result .field{max-width:25rem}
 @media(max-width:480px){.emissions-row{grid-template-columns:minmax(0,1fr) max-content;gap:4px 8px}.emissions-row strong{grid-column:2;grid-row:1}.emissions-track{grid-column:1/-1}}

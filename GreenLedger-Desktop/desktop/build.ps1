@@ -52,7 +52,7 @@ $app = (Read-Web 'app.js').Replace('localStorage.', 'desktopStorage.').Replace('
 $app = $app.Replace("location.protocol === 'file:' ? '<span class=`"avatar`">GL</span>' : '<a class=`"avatar account-entry`" href=`"/login.html`" aria-label=`"Tài khoản`" title=`"Tài khoản`">GL</a>'", "'<span class=`"avatar`">GL</span>'")
 $app = $app.Replace('Tự động lưu trên thiết bị', 'Tự động lưu trên laptop').Replace('Dữ liệu trên trình duyệt có thể mất khi xóa bộ nhớ trang.', 'Tệp số liệu nằm trong Tệp → Mở thư mục dữ liệu.').Replace('Ứng dụng tính và lưu cục bộ trên trình duyệt, không đồng bộ hồ sơ giữa các thiết bị. Bản tải về có thể chạy bằng cách mở index.html. Nên giữ bản sao lưu JSON định kỳ.', 'Ứng dụng lưu số liệu trên laptop này. Dùng bản sao lưu JSON để chuyển dữ liệu sang máy khác.')
 $app = $app.Replace('Dữ liệu lưu trên trình duyệt', 'Dữ liệu lưu trên laptop').Replace("if(file.size>10*1024*1024)throw Error('Tệp quá lớn (tối đa 10 MB)');", '')
-$app = $app.Replace('Phiên bản 1.0', 'Phiên bản 1.24')
+$app = $app.Replace('Phiên bản 1.0', 'Phiên bản 1.24.1')
 $app = $app.Replace("case'new-factor':factorDialog();break;", "case'new-factor':openFactorTemplate();break;")
 $app = $app.Replace("let x=old|| (library==='fuels'?", "let x=old||preset|| (library==='fuels'?")
 $app = $app.Replace('E.seed()', 'mergeIpccFuels(mergeWorkbookFactors(E.seed()))')
